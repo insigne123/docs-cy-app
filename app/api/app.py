@@ -25,14 +25,15 @@ def create_app() -> FastAPI:
     )
     registrar_manejadores(app)
 
-    # Lectura / auth: sin guardia.
+    # Sin guardia: login (el propio mecanismo de auth) y /health para monitoreo.
     app.include_router(auth.router)
-    app.include_router(catalogos.router)
-    app.include_router(alertas.router)
-    app.include_router(metricas.router)
 
-    # Escritura de expedientes: protegida cuando settings.auth_required está activo.
+    # Todo lo demás queda protegido cuando settings.auth_required está activo
+    # (el primer usuario se crea con scripts/crear_admin.py, sin pasar por la API).
     protegido = [Depends(guardia)]
+    app.include_router(catalogos.router, dependencies=protegido)
+    app.include_router(alertas.router, dependencies=protegido)
+    app.include_router(metricas.router, dependencies=protegido)
     app.include_router(contratos.router, dependencies=protegido)
     app.include_router(licitaciones.router, dependencies=protegido)
     app.include_router(importacion.router, dependencies=protegido)

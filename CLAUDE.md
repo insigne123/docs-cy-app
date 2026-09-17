@@ -197,8 +197,17 @@ Carpeta `Documentación del proceso/`:
   verificación de formato Línea B (`POST /formatos/{id}/verificar`), auth mínima
   (`app/services/auth.py`, `POST /auth/login`, `/login`; `AUTH_REQUIRED` off por defecto).
   Pendiente: WorkGes real, correo, roles finos por endpoint.
+- **Etapa 8 (2026-09-17): código listo para producción online con Postgres en la nube**
+  (decisión del usuario: varias personas, app accesible por internet). Alembic con
+  migración inicial probada; `AUTH_REQUIRED=true` ahora protege *todo* (se corrigió un
+  hueco: antes catálogos/alertas/métricas/`panel.json` quedaban sin protección);
+  `scripts/crear_admin.py` para el primer usuario; `Procfile` + `render.yaml` para
+  Railway/Render. Guía completa: `docs/05-despliegue-produccion.md`. **No usa Supabase
+  ni Firebase** — ya tiene backend, base de datos y auth propios. Falta que el usuario
+  cree la cuenta de hosting (Railway o Render) — no puedo hacerlo por él.
+  Repositorio **git inicializado** (antes no existía; tampoco había `git` instalado).
 - **63/63 pruebas pasan** (con `uv` + Python 3.12; el equipo no tiene Python nativo:
   `uv run --no-project --python 3.12 --with-requirements requirements-dev.txt pytest`).
   Stack: FastAPI + SQLAlchemy, SQLite en desarrollo / PostgreSQL en producción.
   Servir todo: `uvicorn app.main:app --reload` (panel en `/panel`, API docs en `/docs`).
-  Instrucciones en `README_DEV.md` y `docs/04-manual-de-uso.md`.
+  Instrucciones en `README_DEV.md`, `docs/04-manual-de-uso.md` y `docs/05-despliegue-produccion.md`.

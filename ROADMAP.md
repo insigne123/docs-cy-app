@@ -229,9 +229,38 @@ Pendiente (requiere decisiones o sistemas externos):
 
 ---
 
+## Etapa 8 — Puesta en producción (app online + Postgres en la nube)  ✅ código listo
+
+Decisión (2026-09-17): la app debe quedar **online**, con **la base de datos en la
+nube**, para que varias personas la usen desde internet (no Supabase/Firebase — el
+sistema ya trae su propio backend, base de datos y autenticación; ver `CLAUDE.md`).
+
+**Hecho y verificado:**
+- `DATABASE_URL` normaliza los formatos `postgres://` que entregan Railway/Render.
+- **Alembic** con la migración inicial generada y probada (creación de las 12 tablas +
+  lectura/escritura real a través del ORM).
+- **Corregido un hueco de seguridad**: con `AUTH_REQUIRED=true` ahora protege *todo*
+  (antes solo contratos/licitaciones/importación; catálogos, alertas, métricas y
+  `/panel.json` quedaban abiertos).
+- Cookie de sesión `Secure` automática cuando `AUTH_REQUIRED=true`.
+- `scripts/crear_admin.py` para el primer usuario (bootstrap sin pasar por la API).
+- `Procfile` + `render.yaml` (blueprint) listos para desplegar.
+- Repositorio **git inicializado** con el estado del proyecto commiteado.
+- **63/63 pruebas siguen pasando** tras estos cambios.
+
+**Pendiente (acción del usuario, no puedo hacerlo por ti — requiere tu cuenta):**
+- Crear la cuenta en Railway o Render y ejecutar los pasos de
+  [`docs/05-despliegue-produccion.md`](docs/05-despliegue-produccion.md).
+- Crear el usuario administrador (`scripts/crear_admin.py`) contra la base ya desplegada.
+- Cargar los datos reales (importador) y crear los usuarios del equipo.
+
+---
+
 ## Estado global
 
-Etapas 0–6 completas y verificadas; Etapa 7 parcial. **63/63 pruebas pasan**
+Etapas 0–6 completas y verificadas; Etapa 7 parcial; Etapa 8 (despliegue) con el código
+listo, a la espera de que el usuario cree la cuenta de hosting. **63/63 pruebas pasan**
 (`uv` + Python 3.12). Pedidos del usuario cubiertos: (1) sistema con las 3 líneas y
 trazabilidad total, (2) dashboard por mes con selector, (3) botón de reporte mensual
-XLSX/PDF con avance, vigencia y alertas de vencidos.
+XLSX/PDF con avance, vigencia y alertas de vencidos, y ahora (4) preparado para producción
+online con base de datos en la nube.

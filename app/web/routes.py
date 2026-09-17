@@ -91,7 +91,11 @@ def panel(request: Request, filtros: dict = Depends(filtros_panel), db: Session 
 
 
 @router.get("/panel.json", include_in_schema=False)
-def panel_json(filtros: dict = Depends(filtros_panel), db: Session = Depends(get_db)):
+def panel_json(
+    request: Request, filtros: dict = Depends(filtros_panel), db: Session = Depends(get_db)
+):
+    if (r := _requiere_login(request, db)) is not None:
+        return r
     return construir_dashboard(db, **filtros)
 
 
@@ -179,7 +183,10 @@ def login_submit(
     if usuario is None or not verify_password(password, usuario.password_hash):
         return RedirectResponse(url="/login?error=1", status_code=303)
     resp = RedirectResponse(url="/panel", status_code=303)
-    resp.set_cookie("token", crear_token(usuario.id), httponly=True, samesite="lax")
+    resp.set_cookie(
+        "token", crear_token(usuario.id), httponly=True, samesite="lax",
+        secure=settings.auth_required,  # en producción (AUTH_REQUIRED=true) se sirve por HTTPS
+    )
     return resp
 
 

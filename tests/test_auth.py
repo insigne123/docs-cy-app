@@ -44,6 +44,14 @@ def test_login_y_proteccion(api, session, usuarios, unidad, contraparte, monkeyp
     assert api.get("/auth/yo", headers=cab).json()["email"] == u.email
     assert api.get("/auth/yo").status_code == 401
 
+    # catálogos, alertas y métricas también quedan protegidos (antes no lo estaban)
+    assert api.get("/usuarios").status_code == 401
+    assert api.get("/usuarios", headers=cab).status_code == 200
+    assert api.get("/alertas").status_code == 401
+    assert api.get("/metricas").status_code == 401
+    r = api.get("/panel.json", follow_redirects=False)
+    assert r.status_code in (303, 307) and r.headers["location"] == "/login"
+
 
 def test_crear_usuario_con_password(api):
     r = api.post(

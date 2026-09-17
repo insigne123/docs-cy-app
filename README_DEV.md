@@ -2,7 +2,8 @@
 
 Núcleo de datos + motor de estados + API REST + importador + panel web + alertas +
 reportes + métricas. Contexto: [`CLAUDE.md`](CLAUDE.md) · Plan: [`ROADMAP.md`](ROADMAP.md) ·
-Diseño: [`docs/`](docs/) · Uso: [`docs/04-manual-de-uso.md`](docs/04-manual-de-uso.md).
+Diseño: [`docs/`](docs/) · Uso: [`docs/04-manual-de-uso.md`](docs/04-manual-de-uso.md) ·
+**Desplegar en producción (online + Postgres en la nube): [`docs/05-despliegue-produccion.md`](docs/05-despliegue-produccion.md).**
 
 > **Estado:** Etapas 0–6 completas + Etapa 7 parcial. La suite pasa **63/63**
 > (ejecutada con `uv` + Python 3.12).
@@ -59,14 +60,21 @@ uv run --no-project --python 3.12 --with-requirements requirements.txt python -m
 (o `python -m scripts.demo_flujos` si tienes el entorno activado). Crea todo en una base
 SQLite en memoria, recorre los tres flujos e imprime la trazabilidad.
 
-## Crear el esquema en una base real (SQLite por defecto)
+## Crear el esquema en una base real
 
+**Desarrollo (SQLite):**
 ```bat
 python -m scripts.init_db
 ```
 
-Configurable con `DATABASE_URL` (ver `.env.example`). PostgreSQL se usará en producción
-(multiusuario en red); las migraciones con Alembic llegan más adelante.
+**Producción (PostgreSQL) — con Alembic:**
+```bat
+alembic upgrade head
+```
+
+`DATABASE_URL` (ver `.env.example`) controla el destino; acepta también el formato
+`postgres://` que entregan Railway/Render. Ver [`docs/05-despliegue-produccion.md`](docs/05-despliegue-produccion.md)
+para el despliegue completo (app online + base en la nube).
 
 ## Levantar la aplicación
 
@@ -126,7 +134,10 @@ app/
   web/
     routes.py          panel, alertas, métricas, ficha, reporte, login
     templates/         base, dashboard, detalle, alertas, metricas, login
-scripts/               init_db, demo_flujos, importar, crear_planilla_ejemplo, reporte, respaldo
+scripts/               init_db, demo_flujos, importar, crear_planilla_ejemplo, reporte,
+                       respaldo, crear_admin (bootstrap de usuario en producción)
+alembic/               migraciones (alembic upgrade head)
 run.bat                arranque local (uv o venv)
+Procfile, render.yaml  despliegue en Railway / Render (ver docs/05)
 tests/                 suite pytest (63)
 ```
