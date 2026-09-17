@@ -201,13 +201,21 @@ Carpeta `Documentación del proceso/`:
   (decisión del usuario: varias personas, app accesible por internet). Alembic con
   migración inicial probada; `AUTH_REQUIRED=true` ahora protege *todo* (se corrigió un
   hueco: antes catálogos/alertas/métricas/`panel.json` quedaban sin protección);
-  `scripts/crear_admin.py` para el primer usuario; `Procfile` + `render.yaml` para
-  Railway/Render. Guía completa: `docs/05-despliegue-produccion.md`. **No usa Supabase
-  ni Firebase** — ya tiene backend, base de datos y auth propios. Falta que el usuario
-  cree la cuenta de hosting (Railway o Render) — no puedo hacerlo por él.
-  Repositorio **git inicializado** (antes no existía; tampoco había `git` instalado).
-- **63/63 pruebas pasan** (con `uv` + Python 3.12; el equipo no tiene Python nativo:
+  `scripts/crear_admin.py` para el primer usuario. Primero propuse Railway/Render
+  (`Procfile` + `render.yaml`, `docs/05-despliegue-produccion.md`) explicando que
+  Supabase/Firebase no eran necesarios (el sistema ya tiene backend/DB/auth propios) —
+  **el usuario pidió explícitamente usar Supabase y Firebase de todas formas**, así que
+  se adaptó: Supabase como Postgres (con SSL forzado y `prepare_threshold=None` para su
+  pooler) + **Cloud Run** (Firebase Hosting no ejecuta Python; reenvía a Cloud Run vía
+  `firebase.json`) corriendo el `Dockerfile` de la app. Guía: `docs/06-despliegue-supabase-firebase.md`.
+  Instalé `git`, Google Cloud SDK y Node.js (este último quedó pendiente por un bloqueo
+  de UAC en el instalador MSI; el usuario deberá instalarlo él mismo o reintentar).
+  Falta que el usuario cree las cuentas de Supabase y Google Cloud/Firebase — no puedo
+  hacerlo por él. Repositorio **git inicializado** (antes no existía ni `git`).
+- **68/68 pruebas pasan** (con `uv` + Python 3.12; el equipo no tiene Python nativo:
   `uv run --no-project --python 3.12 --with-requirements requirements-dev.txt pytest`).
-  Stack: FastAPI + SQLAlchemy, SQLite en desarrollo / PostgreSQL en producción.
+  Stack: FastAPI + SQLAlchemy, SQLite en desarrollo / PostgreSQL (Supabase) en producción.
   Servir todo: `uvicorn app.main:app --reload` (panel en `/panel`, API docs en `/docs`).
-  Instrucciones en `README_DEV.md`, `docs/04-manual-de-uso.md` y `docs/05-despliegue-produccion.md`.
+  Instrucciones en `README_DEV.md`, `docs/04-manual-de-uso.md`,
+  `docs/05-despliegue-produccion.md` (Railway/Render) y
+  `docs/06-despliegue-supabase-firebase.md` (Supabase/Firebase — la elegida).

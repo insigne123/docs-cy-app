@@ -232,34 +232,45 @@ Pendiente (requiere decisiones o sistemas externos):
 ## Etapa 8 — Puesta en producción (app online + Postgres en la nube)  ✅ código listo
 
 Decisión (2026-09-17): la app debe quedar **online**, con **la base de datos en la
-nube**, para que varias personas la usen desde internet (no Supabase/Firebase — el
-sistema ya trae su propio backend, base de datos y autenticación; ver `CLAUDE.md`).
+nube**, para que varias personas la usen desde internet. Primero se propuso Railway/Render
+(`docs/05`); el usuario pidió explícitamente **Supabase (Postgres) + Firebase (hosting)**
+— se adaptó a eso. Aclaración que se le dio: el sistema ya trae su propio backend y
+autenticación, así que Supabase/Firebase se usan como infraestructura (base de datos y
+CDN/hosting apuntando a un contenedor Cloud Run), no como reemplazo del backend.
 
 **Hecho y verificado:**
-- `DATABASE_URL` normaliza los formatos `postgres://` que entregan Railway/Render.
+- `DATABASE_URL` normaliza `postgres://` (Supabase/Railway/Render) y **exige SSL** en
+  cualquier host remoto; `prepare_threshold=None` para el pooler de Supabase.
 - **Alembic** con la migración inicial generada y probada (creación de las 12 tablas +
   lectura/escritura real a través del ORM).
 - **Corregido un hueco de seguridad**: con `AUTH_REQUIRED=true` ahora protege *todo*
   (antes solo contratos/licitaciones/importación; catálogos, alertas, métricas y
   `/panel.json` quedaban abiertos).
 - Cookie de sesión `Secure` automática cuando `AUTH_REQUIRED=true`.
-- `scripts/crear_admin.py` para el primer usuario (bootstrap sin pasar por la API).
-- `Procfile` + `render.yaml` (blueprint) listos para desplegar.
-- Repositorio **git inicializado** con el estado del proyecto commiteado.
-- **63/63 pruebas siguen pasando** tras estos cambios.
+- `scripts/crear_admin.py` para el primer usuario (bootstrap sin pasar por la API;
+  se ejecuta desde cualquier máquina apuntando al `DATABASE_URL` de Supabase).
+- Dos rutas de despliegue listas: `Procfile` + `render.yaml` (Railway/Render, `docs/05`)
+  y `Dockerfile` + `firebase.json` + `.firebaserc` (Cloud Run + Firebase Hosting, `docs/06`
+  — la elegida).
+- Repositorio **git inicializado** con el estado del proyecto commiteado (3 commits).
+- **68/68 pruebas pasan** (suma `tests/test_config.py` para la normalización de la URL).
 
-**Pendiente (acción del usuario, no puedo hacerlo por ti — requiere tu cuenta):**
-- Crear la cuenta en Railway o Render y ejecutar los pasos de
-  [`docs/05-despliegue-produccion.md`](docs/05-despliegue-produccion.md).
-- Crear el usuario administrador (`scripts/crear_admin.py`) contra la base ya desplegada.
-- Cargar los datos reales (importador) y crear los usuarios del equipo.
+**Pendiente (acción del usuario, no puedo hacerlo por ti — requiere tus cuentas):**
+- Crear el proyecto en Supabase y copiar el `DATABASE_URL` del *connection pooler*.
+- Crear/usar un proyecto de Google Cloud y desplegar con
+  `gcloud run deploy --source .` (SDK ya instalado en este equipo).
+- Instalar Node.js + `firebase-tools`, `firebase login`, `firebase use --add`,
+  `firebase deploy --only hosting`.
+- Pasos exactos en [`docs/06-despliegue-supabase-firebase.md`](docs/06-despliegue-supabase-firebase.md).
+- Crear el usuario administrador (`scripts/crear_admin.py`) y cargar los datos reales.
 
 ---
 
 ## Estado global
 
-Etapas 0–6 completas y verificadas; Etapa 7 parcial; Etapa 8 (despliegue) con el código
-listo, a la espera de que el usuario cree la cuenta de hosting. **63/63 pruebas pasan**
+Etapas 0–6 completas y verificadas; Etapa 7 parcial; Etapa 8 (despliegue, vía Supabase +
+Firebase/Cloud Run) con el código listo, a la espera de que el usuario cree las cuentas
+de Supabase y Google Cloud/Firebase. **68/68 pruebas pasan**
 (`uv` + Python 3.12). Pedidos del usuario cubiertos: (1) sistema con las 3 líneas y
 trazabilidad total, (2) dashboard por mes con selector, (3) botón de reporte mensual
 XLSX/PDF con avance, vigencia y alertas de vencidos, y ahora (4) preparado para producción

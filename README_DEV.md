@@ -3,10 +3,11 @@
 Núcleo de datos + motor de estados + API REST + importador + panel web + alertas +
 reportes + métricas. Contexto: [`CLAUDE.md`](CLAUDE.md) · Plan: [`ROADMAP.md`](ROADMAP.md) ·
 Diseño: [`docs/`](docs/) · Uso: [`docs/04-manual-de-uso.md`](docs/04-manual-de-uso.md) ·
-**Desplegar en producción (online + Postgres en la nube): [`docs/05-despliegue-produccion.md`](docs/05-despliegue-produccion.md).**
+**Desplegar en producción con Supabase + Firebase: [`docs/06-despliegue-supabase-firebase.md`](docs/06-despliegue-supabase-firebase.md)**
+(alternativa con Railway/Render: [`docs/05-despliegue-produccion.md`](docs/05-despliegue-produccion.md)).
 
-> **Estado:** Etapas 0–6 completas + Etapa 7 parcial. La suite pasa **63/63**
-> (ejecutada con `uv` + Python 3.12).
+> **Estado:** Etapas 0–6 completas + Etapa 7 parcial + Etapa 8 (despliegue) lista para
+> Supabase/Firebase. La suite pasa **68/68** (ejecutada con `uv` + Python 3.12).
 
 ## Requisitos
 
@@ -50,6 +51,7 @@ Cobertura opcional: `pytest --cov`
 | `tests/test_metricas.py` | Permanencia por estado, throughput, tasa de descarte; API `/metricas` y web. |
 | `tests/test_auth.py` | Hash PBKDF2 y tokens; con `AUTH_REQUIRED` los endpoints de escritura exigen token; login web/JSON. |
 | `tests/test_operacion.py` | Respaldo y restauración de la base SQLite. |
+| `tests/test_config.py` | Normalización de `DATABASE_URL` (Supabase/Render/Railway: esquema, SSL, sin duplicar). |
 
 ## Demo manual (sin base real)
 
@@ -139,5 +141,6 @@ scripts/               init_db, demo_flujos, importar, crear_planilla_ejemplo, r
 alembic/               migraciones (alembic upgrade head)
 run.bat                arranque local (uv o venv)
 Procfile, render.yaml  despliegue en Railway / Render (ver docs/05)
-tests/                 suite pytest (63)
+Dockerfile, firebase.json, .firebaserc   despliegue en Cloud Run + Firebase Hosting (ver docs/06)
+tests/                 suite pytest (68)
 ```
