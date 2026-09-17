@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Métricas · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>Métricas de proceso</h1>
+<div class="sub">Calculadas a partir de la trazabilidad · al {{ m.generado_al }}</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="n">{{ m.total_contratos }}</div><div class="l">Contratos</div></div>
+  <div class="kpi"><div class="n">{{ m.descartes }}</div><div class="l">Descartes</div></div>
+  <div class="kpi"><div class="n">{{ '%.1f' % (m.tasa_descarte * 100) }}%</div><div class="l">Tasa descarte</div></div>
+  <div class="kpi"><div class="n">{{ m.en_aclaraciones }}</div><div class="l">En aclaraciones</div></div>
+  <div class="kpi"><div class="n">{{ m.cuello_de_botella or '—' }}</div><div class="l">Cuello de botella</div></div>
+</div>
+
+<h2>Permanencia por estado (días)</h2>
+<div class="tabla-scroll">
+  <table>
+    <thead><tr><th>Estado</th><th>Muestras</th><th>Promedio</th><th>Mediana</th><th>Máximo</th></tr></thead>
+    <tbody>
+    {% for r in m.permanencia_por_estado %}
+      <tr><td>{{ r.estado }}</td><td>{{ r.n }}</td><td>{{ r.dias_promedio }}</td>
+        <td>{{ r.dias_mediana }}</td><td>{{ r.dias_max }}</td></tr>
+    {% else %}
+      <tr><td colspan="5" class="muted">Sin datos suficientes.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+<h2>Contratos que alcanzaron "vigente" por mes</h2>
+<div class="tabla-scroll">
+  <table>
+    <thead><tr><th>Período</th><th>Contratos a vigente</th></tr></thead>
+    <tbody>
+    {% for t in m.throughput_mensual %}
+      <tr><td>{{ t.periodo }}</td><td>{{ t.a_vigente }}</td></tr>
+    {% else %}
+      <tr><td colspan="2" class="muted">Sin datos.</td></tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

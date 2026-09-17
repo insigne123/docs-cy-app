@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% set c = f.contrato %}
+{% block title %}{{ c.codigo }} · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>{{ c.codigo }}
+  <span class="badge l-{{ c.linea.value }}">{{ c.linea.value }}</span>
+  <span class="badge s-{{ semaforo }}">{{ semaforo.replace('_',' ') }}</span>
+</h1>
+<div class="sub">{{ c.objeto }}</div>
+
+<div class="grid2">
+  <div><span>Estado</span>{{ c.estado.value }}</div>
+  <div><span>Contraparte</span>{{ refs.contraparte or '—' }}</div>
+  <div><span>Unidad solicitante</span>{{ refs.unidad or '—' }}</div>
+  <div><span>Administrador</span>{{ refs.administrador or '—' }}</div>
+  <div><span>Abogado</span>{{ refs.abogado or '—' }}</div>
+  <div><span>Monto</span>{{ (c.moneda.value ~ ' ' ~ '{:,.2f}'.format(c.monto|float)) if c.monto is not none else '—' }}</div>
+  <div><span>Requiere aprobación Gerencia</span>{{ 'sí' if c.requiere_aprobacion_gerencia else 'no' }}</div>
+  <div><span>Requiere garantía</span>{{ 'sí' if c.requiere_garantia else 'no' }}</div>
+  <div><span>Ingreso</span>{{ c.fecha_ingreso.strftime('%Y-%m-%d') if c.fecha_ingreso else '—' }}</div>
+  <div><span>Firma</span>{{ c.fecha_firma.strftime('%Y-%m-%d') if c.fecha_firma else '—' }}</div>
+  <div><span>Inicio vigencia</span>{{ c.fecha_inicio_vigencia.strftime('%Y-%m-%d') if c.fecha_inicio_vigencia else '—' }}</div>
+  <div><span>Fin vigencia</span>{{ c.fecha_fin_vigencia.strftime('%Y-%m-%d') if c.fecha_fin_vigencia else ('indefinida' if c.vigencia_indefinida else '—') }}</div>
+  <div><span>Días para vencer</span>{{ dias if dias is not none else '—' }}</div>
+  <div><span>Renovación</span>{{ c.tipo_renovacion.value }} (aviso {{ c.aviso_previo_dias }} d)</div>
+  {% if c.motivo_descarte %}<div><span>Motivo de descarte</span>{{ c.motivo_descarte }}</div>{% endif %}
+</div>
+
+<h2>Línea de tiempo</h2>
+<ol class="tl">
+  {% for e in f.historial %}
+  <li>
+    <div>{{ (e.estado_origen or '(inicio)') }} &rarr; <strong>{{ e.estado_destino }}</strong>
+      <span class="muted">· {{ e.rol_actor }}</span></div>
+    <div class="fecha">{{ e.fecha.strftime('%Y-%m-%d %H:%M') }}{% if e.comentario %} · {{ e.comentario }}{% endif %}
+      {% if e.retorno_a %} · retorna a {{ e.retorno_a }}{% endif %}</div>
+  </li>
+  {% endfor %}
+</ol>
+
+<h2>Garantías</h2>
+{% if f.garantias %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Tipo</th><th>Instrumento</th><th>Emisor</th><th>Monto</th><th>Emisión</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for g in f.garantias %}
+  <tr><td>{{ g.tipo.value }}</td><td>{{ g.instrumento.value }}</td><td>{{ g.emisor or '—' }}</td>
+    <td>{{ g.moneda.value }} {{ '{:,.0f}'.format(g.monto|float) }}</td>
+    <td>{{ g.fecha_emision.strftime('%Y-%m-%d') }}</td><td>{{ g.fecha_vencimiento.strftime('%Y-%m-%d') }}</td>
+    <td>{{ g.estado.value }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">—</p>{% endif %}
+
+<h2>Hitos</h2>
+{% if f.hitos %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Tipo</th><th>Nombre</th><th>Planificada</th><th>Real</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for h in f.hitos %}
+  <tr><td>{{ h.tipo.value }}</td><td>{{ h.nombre }}</td>
+    <td>{{ h.fecha_planificada.strftime('%Y-%m-%d') }}</td>
+    <td>{{ h.fecha_real.strftime('%Y-%m-%d') if h.fecha_real else '—' }}</td>
+    <td>{{ h.estado.value }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">—</p>{% endif %}
+
+<h2>Multas</h2>
+{% if f.multas %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Descripción</th><th>Monto</th><th>Fecha</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for m in f.multas %}
+  <tr><td>{{ m.descripcion }}</td><td>{{ m.moneda.value }} {{ '{:,.0f}'.format(m.monto|float) }}</td>
+    <td>{{ m.fecha_aplicacion.strftime('%Y-%m-%d') }}</td><td>{{ m.estado.value }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">—</p>{% endif %}
+
+<h2>Documentos</h2>
+{% if f.documentos %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Tipo</th><th>Archivo</th><th>Versión</th><th>Cargado</th></tr></thead>
+  <tbody>
+  {% for d in f.documentos %}
+  <tr><td>{{ d.tipo.value }}</td><td>{{ d.nombre_archivo }}</td><td>{{ d.version }}</td>
+    <td>{{ d.cargado_en.strftime('%Y-%m-%d') }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">—</p>{% endif %}
+{% endblock %}

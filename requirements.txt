@@ -1,0 +1,12 @@
+SQLAlchemy>=2.0,<2.1
+pydantic>=2.6
+pydantic-settings>=2.2
+fastapi>=0.110
+uvicorn[standard]>=0.29
+jinja2>=3.1
+python-multipart>=0.0.9
+python-dotenv>=1.0
+openpyxl>=3.1
+fpdf2>=2.7,<3
+# Driver PostgreSQL para producción (no se usa con SQLite en desarrollo/pruebas)
+psycopg[binary]>=3.1

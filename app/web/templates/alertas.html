@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Alertas · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>Alertas</h1>
+<div class="sub">{{ resumen.total }} alerta(s)</div>
+
+<div class="kpis">
+  {% for nivel, n in resumen.por_nivel.items() %}
+  <div class="kpi"><div class="n n-{{ nivel }}">{{ n }}</div><div class="l">{{ nivel }}</div></div>
+  {% endfor %}
+  {% for tipo, n in resumen.por_tipo.items() %}
+  <div class="kpi"><div class="n">{{ n }}</div><div class="l">{{ tipo.replace('_',' ') }}</div></div>
+  {% endfor %}
+</div>
+
+{% if not alertas %}
+  <div class="empty">Sin alertas. Todo al día.</div>
+{% else %}
+<div class="tabla-scroll">
+  <table>
+    <thead><tr><th>Nivel</th><th>Tipo</th><th>Contrato</th><th>Título</th><th>Detalle</th><th>Fecha ref.</th><th>Días</th></tr></thead>
+    <tbody>
+    {% for a in alertas %}
+      <tr>
+        <td class="n-{{ a.nivel }}">{{ a.nivel }}</td>
+        <td>{{ a.tipo.replace('_',' ') }}</td>
+        <td>{% if a.contrato_id %}<a href="/panel/contratos/{{ a.contrato_id }}">{{ a.contrato_codigo or a.contrato_id }}</a>{% else %}—{% endif %}</td>
+        <td>{{ a.titulo }}</td>
+        <td>{{ a.detalle }}</td>
+        <td>{{ a.fecha_referencia or '—' }}</td>
+        <td>{{ a.dias if a.dias is not none else '—' }}</td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+{% set ind = datos.indicadores %}
+{% block body %}
+<h1>Panel de Contratos y Licitaciones</h1>
+<div class="sub">
+  Agrupado por <strong>{{ datos.agrupacion }}</strong> ·
+  {{ ind.total }} contrato(s) · datos al {{ datos.hoy.strftime('%Y-%m-%d') }}
+</div>
+
+<div class="nav">
+  {% if alertas.total %}
+  <a class="badge s-vencido" href="/panel/alertas">&#9888; {{ alertas.total }} alerta(s)</a>
+  {% else %}
+  <a class="badge s-vigente" href="/panel/alertas">Sin alertas</a>
+  {% endif %}
+  <a href="/panel/metricas">Métricas de proceso</a>
+  <form class="rep" method="get" action="/panel/reporte">
+    <input type="month" name="periodo" value="{{ datos.hoy.strftime('%Y-%m') }}" required>
+    <select name="formato"><option value="xlsx">XLSX</option><option value="pdf">PDF</option></select>
+    <button class="btn" type="submit">Descargar reporte del mes</button>
+  </form>
+</div>
+
+<div class="kpis">
+  <div class="kpi"><div class="n">{{ ind.total }}</div><div class="l">Total</div></div>
+  <div class="kpi"><div class="n">{{ ind.por_linea.get('A_regular', 0) }}</div><div class="l">Línea A</div></div>
+  <div class="kpi"><div class="n">{{ ind.por_linea.get('B_autogestionado', 0) }}</div><div class="l">Línea B</div></div>
+  <div class="kpi"><div class="n">{{ ind.por_linea.get('C_licitacion', 0) }}</div><div class="l">Línea C</div></div>
+  <div class="kpi"><div class="n">{{ ind.vigentes }}</div><div class="l">Vigentes</div></div>
+  <div class="kpi"><div class="n">{{ ind.por_vencer }}</div><div class="l">Por vencer</div></div>
+  <div class="kpi"><div class="n">{{ ind.vencidos }}</div><div class="l">Vencidos</div></div>
+  <div class="kpi"><div class="n">{{ ind.en_renovacion }}</div><div class="l">En renovación</div></div>
+  {% for moneda, total in ind.monto_total.items() %}
+  <div class="kpi"><div class="n">{{ '{:,.0f}'.format(total|float) }}</div><div class="l">Monto {{ moneda }}</div></div>
+  {% endfor %}
+</div>
+
+<form class="filtros" method="get" action="/panel">
+  <label>Agrupar por
+    <select name="agrupacion">
+      {% for a in opciones.agrupaciones %}
+      <option value="{{ a }}" {{ 'selected' if filtros.agrupacion == a }}>{{ a }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Línea
+    <select name="linea">
+      <option value="">Todas</option>
+      {% for l in opciones.lineas %}
+      <option value="{{ l }}" {{ 'selected' if filtros.linea == l }}>{{ l }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Estado
+    <select name="estado">
+      <option value="">Todos</option>
+      {% for e in opciones.estados %}
+      <option value="{{ e }}" {{ 'selected' if filtros.estado == e }}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Unidad
+    <select name="unidad_id">
+      <option value="">Todas</option>
+      {% for u in opciones.unidades %}
+      <option value="{{ u.id }}" {{ 'selected' if filtros.unidad_id == u.id }}>{{ u.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Administrador
+    <select name="administrador_id">
+      <option value="">Todos</option>
+      {% for u in opciones.administradores %}
+      <option value="{{ u.id }}" {{ 'selected' if filtros.administrador_id == u.id }}>{{ u.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Contraparte
+    <select name="contraparte_id">
+      <option value="">Todas</option>
+      {% for c in opciones.contrapartes %}
+      <option value="{{ c.id }}" {{ 'selected' if filtros.contraparte_id == c.id }}>{{ c.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Desde <input type="date" name="desde" value="{{ filtros.desde or '' }}"></label>
+  <label>Hasta <input type="date" name="hasta" value="{{ filtros.hasta or '' }}"></label>
+  <button class="btn" type="submit">Filtrar</button>
+  <a class="btn ghost" href="/panel">Limpiar</a>
+</form>
+
+{% if not datos.grupos %}
+  <div class="empty">Sin contratos para los filtros seleccionados.</div>
+{% endif %}
+
+{% for g in datos.grupos %}
+<section>
+  <h2>{{ g.etiqueta }} <span class="muted">({{ g.cantidad }})</span></h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr>
+        <th>Código</th><th>Contraparte</th><th>Objeto</th><th>Línea</th><th>Estado</th>
+        <th>Monto</th><th>Fin vigencia</th><th>Días</th><th>Semáforo</th>
+      </tr></thead>
+      <tbody>
+      {% for c in g.contratos %}
+        <tr>
+          <td><a href="/panel/contratos/{{ c.id }}">{{ c.codigo }}</a></td>
+          <td>{{ c.contraparte or '—' }}</td>
+          <td class="obj">{{ c.objeto }}</td>
+          <td><span class="badge l-{{ c.linea }}">{{ c.linea[0] }}</span></td>
+          <td>{{ c.estado }}</td>
+          <td>{{ (c.moneda ~ ' ' ~ '{:,.0f}'.format(c.monto|float)) if c.monto else '—' }}</td>
+          <td>{{ c.fecha_fin_vigencia.strftime('%Y-%m-%d') if c.fecha_fin_vigencia else ('indefinida' if c.vigencia_indefinida else '—') }}</td>
+          <td>{{ c.dias_para_vencer if c.dias_para_vencer is not none else '—' }}</td>
+          <td><span class="badge s-{{ c.semaforo }}">{{ c.semaforo.replace('_',' ') }}</span></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

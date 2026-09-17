@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Panel de Contratos{% endblock %}</title>
+  <style>
+    :root{
+      --bg:#f6f7f8; --card:#fff; --ink:#1c1e21; --muted:#6b7280; --line:#e3e6ea;
+      --navy:#1f3b5b; --green:#1c7d54; --maroon:#7a2233;
+      --ok:#1c7d54; --ok-bg:#e6f4ec; --warn:#8a5a00; --warn-bg:#fdf0d8;
+      --info:#1f3b5b; --info-bg:#e5ecf5; --bad:#8f1d1d; --bad-bg:#fbe7e7;
+      --gray:#4b5563; --gray-bg:#eceef1;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--ink);
+      font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+    a{color:var(--navy)}
+    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    h1{font-size:22px;margin:0 0 2px}
+    h2{font-size:16px;margin:22px 0 8px}
+    .sub{color:var(--muted);font-size:12px;margin-bottom:16px}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
+    .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+    .kpi .n{font-size:20px;font-weight:700}
+    .kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+    form.filtros{background:var(--card);border:1px solid var(--line);border-radius:10px;
+      padding:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:8px}
+    form.filtros label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);gap:3px}
+    form.filtros select,form.filtros input{font:inherit;padding:5px 7px;border:1px solid var(--line);
+      border-radius:7px;background:#fff;min-width:130px}
+    .btn{font:inherit;padding:6px 14px;border:1px solid var(--navy);background:var(--navy);color:#fff;
+      border-radius:7px;cursor:pointer;text-decoration:none;display:inline-block}
+    .btn.ghost{background:#fff;color:var(--navy)}
+    .tabla-scroll{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+    table{border-collapse:collapse;width:100%;font-size:13px}
+    th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+    th{background:#fafbfc;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+    td.obj{white-space:normal;max-width:280px}
+    tr:last-child td{border-bottom:0}
+    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+    .l-A_regular{background:var(--info-bg);color:var(--navy)}
+    .l-B_autogestionado{background:var(--ok-bg);color:var(--green)}
+    .l-C_licitacion{background:var(--bad-bg);color:var(--maroon)}
+    .s-vigente{background:var(--ok-bg);color:var(--ok)}
+    .s-por_vencer{background:var(--warn-bg);color:var(--warn)}
+    .s-en_renovacion{background:var(--info-bg);color:var(--info)}
+    .s-vencido{background:var(--bad-bg);color:var(--bad)}
+    .s-cerrado{background:var(--gray-bg);color:var(--gray)}
+    .s-en_tramite{background:var(--gray-bg);color:var(--gray)}
+    .s-sin_vigencia{background:var(--warn-bg);color:var(--warn)}
+    .empty{background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted)}
+    .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 20px;
+      background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
+    .grid2 div span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase}
+    ol.tl{list-style:none;padding:0;margin:0}
+    ol.tl li{border-left:2px solid var(--line);padding:0 0 14px 14px;position:relative}
+    ol.tl li:before{content:"";position:absolute;left:-5px;top:3px;width:8px;height:8px;border-radius:50%;background:var(--navy)}
+    ol.tl .fecha{font-size:11px;color:var(--muted)}
+    .muted{color:var(--muted)}
+    .nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:10px 0 4px}
+    .nav .rep{margin-left:auto;display:flex;gap:6px;align-items:center;background:var(--card);
+      border:1px solid var(--line);border-radius:10px;padding:6px 8px}
+    .nav .rep input,.nav .rep select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px}
+    .n-critica{color:var(--bad);font-weight:700}
+    .n-urgente{color:var(--bad)}
+    .n-atencion{color:var(--warn)}
+    .n-informativa{color:var(--muted)}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    {% block body %}{% endblock %}
+  </div>
+</body>
+</html>
