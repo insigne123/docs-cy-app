@@ -1,0 +1,17 @@
+.venv
+.git
+.github
+__pycache__
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+.pytest_cache
+.coverage
+htmlcov
+tests
+docs
+Documentación del proceso
+.env
+.claude
+node_modules

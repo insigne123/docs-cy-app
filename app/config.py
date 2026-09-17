@@ -19,12 +19,19 @@ class Settings(BaseSettings):
     @field_validator("database_url")
     @classmethod
     def _normalizar_database_url(cls, v: str) -> str:
-        """Adapta las URLs que entregan Render/Railway/Heroku (postgres://, postgresql://)
-        al driver psycopg (v3) que usa este proyecto."""
+        """Adapta las URLs que entregan Supabase/Render/Railway/Heroku (postgres://,
+        postgresql://) al driver psycopg (v3) que usa este proyecto, y exige SSL para
+        cualquier Postgres remoto (todos esos proveedores lo requieren)."""
         if v.startswith("postgres://"):
             v = "postgresql://" + v[len("postgres://"):]
         if v.startswith("postgresql://") and "+psycopg" not in v:
             v = "postgresql+psycopg://" + v[len("postgresql://"):]
+        es_remoto = v.startswith("postgresql+psycopg://") and not any(
+            h in v for h in ("localhost", "127.0.0.1")
+        )
+        if es_remoto and "sslmode=" not in v:
+            separador = "&" if "?" in v else "?"
+            v = f"{v}{separador}sslmode=require"
         return v
 
 

@@ -8,7 +8,11 @@ from app.config import settings
 from app.models.base import Base
 
 _is_sqlite = settings.database_url.startswith("sqlite")
-_connect_args = {"check_same_thread": False} if _is_sqlite else {}
+# `prepare_threshold=None` desactiva las sentencias preparadas del lado del servidor:
+# necesario si se conecta a través del pooler de Supabase (Supavisor/pgbouncer en modo
+# "transaction"), que no sostiene el estado de sesión entre consultas. No afecta a una
+# conexión directa a Postgres.
+_connect_args = {"check_same_thread": False} if _is_sqlite else {"prepare_threshold": None}
 
 engine = create_engine(settings.database_url, echo=settings.echo_sql, connect_args=_connect_args, future=True)
 
