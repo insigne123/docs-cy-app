@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Nueva licitación · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>Nueva licitación <span class="badge l-C_licitacion">Flujo Completo</span></h1>
+<div class="sub">
+  Solicitante: <strong>{{ usuario.nombre }}</strong> ({{ usuario.rol.value }}). Esto inicia la
+  Fase I (Pre-Adjudicación); si se adjudica, se crea automáticamente el contrato en Fase II.
+</div>
+
+{% if error %}<p class="n-critica">{{ error }}</p>{% endif %}
+
+<form method="post" action="/panel/licitaciones/nuevo" class="grid2" style="display:grid">
+  <label>Unidad solicitante
+    <select name="unidad_solicitante_id" required>
+      {% for u in unidades %}<option value="{{ u.id }}">{{ u.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Contraparte / mandante registrado
+    <select name="contraparte_id">
+      <option value="">(sin definir todavía)</option>
+      {% for c in contrapartes %}<option value="{{ c.id }}">{{ c.razon_social }}</option>{% endfor %}
+    </select>
+  </label>
+  <label style="grid-column:1/-1">Objeto de la licitación
+    <textarea name="objeto" required rows="2" style="width:100%"></textarea>
+  </label>
+  <label>Mandante (texto libre, si no está en Contraparte)
+    <input type="text" name="mandante">
+  </label>
+  <label>Moneda
+    <select name="moneda">
+      <option value="">—</option>
+      {% for m in monedas %}<option value="{{ m.value }}">{{ m.value }}</option>{% endfor %}
+    </select>
+  </label>
+  <label style="flex-direction:row;align-items:center;gap:6px">
+    <input type="checkbox" name="exige_garantia_seriedad" value="1"> Las bases exigen garantía de seriedad de la oferta
+  </label>
+  <div style="grid-column:1/-1">
+    <button class="btn" type="submit">Crear licitación</button>
+  </div>
+</form>
+{% endblock %}

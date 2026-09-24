@@ -4,6 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.enums import (
@@ -19,6 +20,17 @@ from app.models.core import Contraparte, Unidad, Usuario
 from app.models.evento import EventoEstado
 from app.models.licitacion import Licitacion
 from app.state_machine.engine import MotorEstados
+
+
+def generar_codigo_licitacion(session: Session) -> str:
+    """Código correlativo único (`LIC-2026-0001`) para el formulario web."""
+    anio = date.today().year
+    n = session.query(Licitacion).count() + 1
+    while True:
+        codigo = f"LIC-{anio}-{n:04d}"
+        if session.scalars(select(Licitacion.id).where(Licitacion.codigo == codigo)).first() is None:
+            return codigo
+        n += 1
 
 
 def crear_licitacion(

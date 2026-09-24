@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% set l = f.licitacion %}
+{% block title %}{{ l.codigo }} · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>{{ l.codigo }}
+  <span class="badge l-C_licitacion">Flujo Completo</span>
+  <span class="badge s-en_tramite">{{ l.estado.value.replace('_',' ') }}</span>
+</h1>
+<div class="sub">{{ l.objeto }}</div>
+
+{% if ok %}<p class="s-vigente" style="display:inline-block;padding:4px 10px;border-radius:8px">{{ ok }}</p>{% endif %}
+{% if error %}<p class="n-critica">{{ error }}</p>{% endif %}
+
+<div class="grid2">
+  <div><span>Fase</span>{{ l.fase.value }}</div>
+  <div><span>Resultado</span>{{ l.resultado.value }}</div>
+  <div><span>Unidad solicitante</span>{{ refs.unidad or '—' }}</div>
+  <div><span>Contraparte / mandante</span>{{ refs.contraparte or l.mandante or '—' }}</div>
+  <div><span>Ingreso</span>{{ l.fecha_ingreso.strftime('%Y-%m-%d') if l.fecha_ingreso else '—' }}</div>
+  <div><span>Presupuesto referencia</span>{{ (l.moneda.value ~ ' ' ~ '{:,.0f}'.format(l.presupuesto_referencia|float)) if l.presupuesto_referencia is not none else '—' }}</div>
+  <div><span>Exige garantía de seriedad</span>{{ 'sí' if l.exige_garantia_seriedad else 'no' }}</div>
+  {% if l.contrato_id %}<div><span>Contrato adjudicado</span><a href="/panel/contratos/{{ l.contrato_id }}">ver ficha</a></div>{% endif %}
+  {% if l.analisis_interno %}<div><span>Análisis interno</span>{{ l.analisis_interno }}</div>{% endif %}
+</div>
+
+<h2>Avanzar el flujo (Fase I)</h2>
+{% if opciones_transicion or puede_adjudicar or puede_descartar %}
+<form method="post" action="/panel/licitaciones/{{ l.id }}/transicion" class="filtros" style="flex-direction:column;align-items:stretch;max-width:640px">
+  <label>Nuevo estado
+    <select name="hacia" required>
+      {% for o in opciones_transicion %}<option value="{{ o }}">{{ o.replace('_',' ') }}</option>{% endfor %}
+      {% if puede_descartar %}<option value="descartado">descartado (cierre definitivo)</option>{% endif %}
+    </select>
+  </label>
+  <label>Comentario <span class="muted">(obligatorio si eliges "descartado")</span>
+    <input type="text" name="comentario" style="width:100%">
+  </label>
+  <label>Análisis interno <span class="muted">(obligatorio para "no adjudicada")</span>
+    <input type="text" name="analisis_interno" style="width:100%">
+  </label>
+  <fieldset style="border:1px solid var(--line);border-radius:8px;padding:8px 10px">
+    <legend class="muted">Confirmaciones del paso</legend>
+    {% for clave, etiqueta in flags_licitacion %}
+    <label style="display:flex;flex-direction:row;align-items:center;gap:6px;font-weight:normal">
+      <input type="checkbox" name="{{ clave }}" value="1"> {{ etiqueta }}
+    </label>
+    {% endfor %}
+  </fieldset>
+  <div><button class="btn" type="submit">Aplicar transición</button></div>
+</form>
+{% else %}
+<p class="muted">Esta licitación está en un estado terminal ({{ l.estado.value }}).</p>
+{% endif %}
+
+{% if puede_adjudicar %}
+<h2>Adjudicar</h2>
+<form method="post" action="/panel/licitaciones/{{ l.id }}/adjudicar" class="filtros" style="max-width:480px">
+  <label>Código del contrato <span class="muted">(vacío = autogenerado)</span>
+    <input type="text" name="codigo_contrato">
+  </label>
+  <button class="btn" type="submit">Adjudicar y crear contrato</button>
+</form>
+{% endif %}
+
+<h2>Línea de tiempo</h2>
+<ol class="tl">
+  {% for e in f.historial %}
+  <li>
+    <div>{{ (e.estado_origen or '(inicio)') }} &rarr; <strong>{{ e.estado_destino }}</strong>
+      <span class="muted">· {{ e.rol_actor }}</span></div>
+    <div class="fecha">{{ e.fecha.strftime('%Y-%m-%d %H:%M') }}{% if e.comentario %} · {{ e.comentario }}{% endif %}</div>
+  </li>
+  {% endfor %}
+</ol>
+
+<h2>Garantías</h2>
+{% if f.garantias %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Tipo</th><th>Instrumento</th><th>Emisor</th><th>Monto</th><th>Emisión</th><th>Vencimiento</th><th>Estado</th></tr></thead>
+  <tbody>
+  {% for g in f.garantias %}
+  <tr><td>{{ g.tipo.value }}</td><td>{{ g.instrumento.value }}</td><td>{{ g.emisor or '—' }}</td>
+    <td>{{ g.moneda.value }} {{ '{:,.0f}'.format(g.monto|float) }}</td>
+    <td>{{ g.fecha_emision.strftime('%Y-%m-%d') }}</td><td>{{ g.fecha_vencimiento.strftime('%Y-%m-%d') }}</td>
+    <td>{{ g.estado.value }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">—</p>{% endif %}
+
+<details style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar garantía (ej. seriedad de la oferta)</summary>
+<form method="post" action="/panel/licitaciones/{{ l.id }}/garantias" class="grid2" style="display:grid;margin-top:8px">
+  <label>Tipo
+    <select name="tipo" required>{% for t in garantia_tipos %}<option value="{{ t.value }}">{{ t.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Instrumento
+    <select name="instrumento" required>{% for i in garantia_instrumentos %}<option value="{{ i.value }}">{{ i.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Emisor <input type="text" name="emisor"></label>
+  <label>Número <input type="text" name="numero"></label>
+  <label>Monto <input type="number" step="0.01" name="monto" required></label>
+  <label>Moneda
+    <select name="moneda" required>{% for m in monedas %}<option value="{{ m.value }}">{{ m.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Emisión <input type="date" name="fecha_emision" required></label>
+  <label>Vencimiento <input type="date" name="fecha_vencimiento" required></label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Agregar garantía</button></div>
+</form>
+</details>
+{% endblock %}

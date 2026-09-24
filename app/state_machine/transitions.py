@@ -158,6 +158,17 @@ def buscar(
     return None
 
 
+def transiciones_disponibles_licitacion(desde: str) -> list[str]:
+    """Estados destino alcanzables desde `desde` para una licitación (Fase I)."""
+    vistos: list[str] = []
+    for t in TRANSICIONES_LICITACION:
+        if t.desde != desde:
+            continue
+        if t.hacia not in vistos:
+            vistos.append(t.hacia)
+    return vistos
+
+
 def transiciones_disponibles(desde: str, linea_val: Optional[str]) -> list[str]:
     """Estados destino alcanzables desde `desde` para esa línea (para armar el formulario
     de avance del panel web). No incluye 'descartado' (siempre disponible aparte) ni

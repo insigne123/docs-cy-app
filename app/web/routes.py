@@ -18,6 +18,7 @@ from app.config import settings
 from app.enums import (
     CategoriaContrato,
     EstadoContrato,
+    EstadoLicitacion,
     GarantiaEstado,
     GarantiaInstrumento,
     GarantiaTipo,
@@ -28,15 +29,17 @@ from app.enums import (
 )
 from app.models.contrato import Contrato, Garantia
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
+from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
 from app.services.auth import crear_token, verify_password
-from app.services.consultas import ficha_contrato
+from app.services.consultas import ficha_contrato, ficha_licitacion
 from app.services.contratos import calcular_requiere_gerencia, crear_contrato, generar_codigo
 from app.services.dashboard import construir_dashboard, opciones_filtros, semaforo_de
+from app.services.licitaciones import adjudicar_licitacion, crear_licitacion, generar_codigo_licitacion
 from app.services.metricas import metricas_proceso
 from app.services.reportes import generar_reporte_mensual
 from app.state_machine import ErrorTransicion, MotorEstados
-from app.state_machine.transitions import transiciones_disponibles
+from app.state_machine.transitions import transiciones_disponibles, transiciones_disponibles_licitacion
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 router = APIRouter(tags=["panel"])
@@ -53,6 +56,16 @@ _FLAGS_EXTRA = [
     ("documento_checksum", "Checksum del documento (Línea B) — pegar el hash del formato"),
     ("coherente_con_oferta", "Coherente con la oferta (Gate 1 de licitación)"),
 ]
+
+_FLAGS_LICITACION = [
+    ("informe_riesgos_ok", "Informe de Riesgos y Validación Final emitido"),
+    ("oferta_tecnica_ok", "Oferta técnica lista"),
+    ("oferta_economica_ok", "Oferta económica lista"),
+]
+
+# Estados de licitación que se ofrecen en el desplegable de avance normal;
+# 'adjudicada' tiene su propio botón/acción porque además crea el contrato.
+_LICITACION_TERMINALES = ("no_adjudicada", "desierta", "desistida", "descartado")
 
 
 def _to_int(v: Optional[str]) -> Optional[int]:
@@ -434,6 +447,190 @@ async def transicion_submit(cid: int, request: Request, db: Session = Depends(ge
     except ValueError as exc:
         return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('Estado inválido: ' + str(exc))}", status_code=303)
     return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Estado actualizado')}", status_code=303)
+
+
+# --------------------------------------------------------------------- Licitaciones (Flujo Completo)
+@router.get("/panel/licitaciones/nuevo", response_class=HTMLResponse, include_in_schema=False)
+def nueva_licitacion_form(request: Request, db: Session = Depends(get_db), error: Optional[str] = None):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    return templates.TemplateResponse(
+        request=request,
+        name="nueva_licitacion.html",
+        context={"usuario": usuario, "monedas": list(Moneda), "error": error, **_catalogos_basicos(db)},
+        headers=SIN_CACHE,
+    )
+
+
+@router.post("/panel/licitaciones/nuevo", include_in_schema=False)
+def nueva_licitacion_submit(
+    request: Request,
+    db: Session = Depends(get_db),
+    objeto: str = Form(...),
+    unidad_solicitante_id: int = Form(...),
+    contraparte_id: Optional[str] = Form(None),
+    mandante: Optional[str] = Form(None),
+    moneda: Optional[str] = Form(None),
+    exige_garantia_seriedad: Optional[str] = Form(None),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    unidad = db.get(Unidad, unidad_solicitante_id)
+    if unidad is None:
+        return RedirectResponse(url=f"/panel/licitaciones/nuevo?error={_msg('Unidad inválida')}", status_code=303)
+    contraparte = db.get(Contraparte, int(contraparte_id)) if contraparte_id else None
+    lic = crear_licitacion(
+        db,
+        codigo=generar_codigo_licitacion(db),
+        objeto=objeto,
+        unidad_solicitante=unidad,
+        solicitante=usuario,
+        contraparte=contraparte,
+        mandante=mandante or None,
+        moneda=Moneda(moneda) if moneda else None,
+        exige_garantia_seriedad=bool(exige_garantia_seriedad),
+    )
+    db.commit()
+    return RedirectResponse(url=f"/panel/licitaciones/{lic.id}?ok={_msg('Licitación creada')}", status_code=303)
+
+
+@router.get("/panel/licitaciones/{lid}", response_class=HTMLResponse, include_in_schema=False)
+def detalle_licitacion(
+    lid: int, request: Request, db: Session = Depends(get_db),
+    error: Optional[str] = None, ok: Optional[str] = None,
+):
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    lic = obtener_o_404(db, Licitacion, lid, "Licitación")
+    ficha = ficha_licitacion(db, lic)
+
+    def _nombre(modelo, ident, attr):
+        obj = db.get(modelo, ident) if ident else None
+        return getattr(obj, attr) if obj else None
+
+    refs = {
+        "contraparte": _nombre(Contraparte, lic.contraparte_id, "razon_social"),
+        "unidad": _nombre(Unidad, lic.unidad_solicitante_id, "nombre"),
+    }
+    estado_actual = lic.estado.value
+    if estado_actual in _LICITACION_TERMINALES:
+        opciones = []
+    else:
+        opciones = [o for o in transiciones_disponibles_licitacion(estado_actual) if o != "adjudicada"]
+    puede_adjudicar = estado_actual == "evaluacion_resultado"
+
+    return templates.TemplateResponse(
+        request=request,
+        name="detalle_licitacion.html",
+        context={
+            "f": ficha, "refs": refs, "error": error, "ok": ok,
+            "opciones_transicion": opciones,
+            "puede_adjudicar": puede_adjudicar,
+            "puede_descartar": estado_actual not in _LICITACION_TERMINALES,
+            "flags_licitacion": _FLAGS_LICITACION,
+            "garantia_tipos": list(GarantiaTipo),
+            "garantia_instrumentos": list(GarantiaInstrumento),
+            "monedas": list(Moneda),
+        },
+        headers=SIN_CACHE,
+    )
+
+
+@router.post("/panel/licitaciones/{lid}/transicion", include_in_schema=False)
+async def transicion_licitacion_submit(lid: int, request: Request, db: Session = Depends(get_db)):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    lic = obtener_o_404(db, Licitacion, lid, "Licitación")
+
+    form = await request.form()
+    hacia = form.get("hacia")
+    comentario = (form.get("comentario") or None) and str(form.get("comentario"))
+    if not hacia:
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Falta elegir un estado destino')}", status_code=303)
+
+    extra: dict = {}
+    for clave, _etiqueta in _FLAGS_LICITACION:
+        if form.get(clave):
+            extra[clave] = True
+    if form.get("analisis_interno"):
+        extra["analisis_interno"] = str(form.get("analisis_interno"))
+
+    try:
+        MotorEstados(db).transicionar_licitacion(
+            lic, EstadoLicitacion(str(hacia)), usuario=usuario, comentario=comentario, extra=extra,
+        )
+        db.commit()
+    except ErrorTransicion as exc:
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg(exc)}", status_code=303)
+    except ValueError as exc:
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Estado inválido: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Estado actualizado')}", status_code=303)
+
+
+@router.post("/panel/licitaciones/{lid}/adjudicar", include_in_schema=False)
+def adjudicar_submit(
+    lid: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    codigo_contrato: Optional[str] = Form(None),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    lic = obtener_o_404(db, Licitacion, lid, "Licitación")
+    try:
+        contrato = adjudicar_licitacion(
+            db, lic, usuario=usuario, codigo_contrato=codigo_contrato or generar_codigo(db),
+        )
+        db.commit()
+    except ErrorTransicion as exc:
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg(exc)}", status_code=303)
+    return RedirectResponse(
+        url=f"/panel/contratos/{contrato.id}?ok={_msg('Licitación adjudicada: contrato creado')}", status_code=303
+    )
+
+
+@router.post("/panel/licitaciones/{lid}/garantias", include_in_schema=False)
+def agregar_garantia_licitacion_submit(
+    lid: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    tipo: str = Form(...),
+    instrumento: str = Form(...),
+    monto: str = Form(...),
+    moneda: str = Form(...),
+    fecha_emision: str = Form(...),
+    fecha_vencimiento: str = Form(...),
+    emisor: Optional[str] = Form(None),
+    numero: Optional[str] = Form(None),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    obtener_o_404(db, Licitacion, lid, "Licitación")
+    try:
+        db.add(
+            Garantia(
+                entidad_tipo="licitacion",
+                entidad_id=lid,
+                tipo=GarantiaTipo(tipo),
+                instrumento=GarantiaInstrumento(instrumento),
+                emisor=emisor or None,
+                numero=numero or None,
+                monto=Decimal(monto),
+                moneda=Moneda(moneda),
+                fecha_emision=date.fromisoformat(fecha_emision),
+                fecha_vencimiento=date.fromisoformat(fecha_vencimiento),
+                estado=GarantiaEstado.vigente,
+            )
+        )
+        db.commit()
+    except (ValueError, InvalidOperation) as exc:
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Garantía inválida: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Garantía agregada')}", status_code=303)
 
 
 @router.get("/panel/reporte", include_in_schema=False)
