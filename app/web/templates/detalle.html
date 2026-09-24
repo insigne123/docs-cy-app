@@ -9,6 +9,9 @@
 </h1>
 <div class="sub">{{ c.objeto }}</div>
 
+{% if ok %}<p class="s-vigente" style="display:inline-block;padding:4px 10px;border-radius:8px">{{ ok }}</p>{% endif %}
+{% if error %}<p class="n-critica">{{ error }}</p>{% endif %}
+
 <div class="grid2">
   <div><span>Estado</span>{{ c.estado.value }}</div>
   <div><span>Contraparte</span>{{ refs.contraparte or '—' }}</div>
@@ -26,6 +29,91 @@
   <div><span>Renovación</span>{{ c.tipo_renovacion.value }} (aviso {{ c.aviso_previo_dias }} d)</div>
   {% if c.motivo_descarte %}<div><span>Motivo de descarte</span>{{ c.motivo_descarte }}</div>{% endif %}
 </div>
+
+<h2>Avanzar el flujo</h2>
+{% if opciones_transicion or puede_descartar %}
+<form method="post" action="/panel/contratos/{{ c.id }}/transicion" class="filtros" style="flex-direction:column;align-items:stretch;max-width:640px">
+  <label>Nuevo estado
+    <select name="hacia" required>
+      {% for o in opciones_transicion %}<option value="{{ o }}">{{ o.replace('_',' ') }}</option>{% endfor %}
+      {% if puede_descartar %}<option value="descartado">descartado (cierre definitivo)</option>{% endif %}
+    </select>
+  </label>
+  <label>Comentario <span class="muted">(obligatorio si eliges "descartado")</span>
+    <input type="text" name="comentario" style="width:100%">
+  </label>
+  <label>Fecha nueva de fin de vigencia <span class="muted">(sólo si renuevas un contrato vigente)</span>
+    <input type="date" name="nueva_fecha_fin">
+  </label>
+  <label>Análisis interno <span class="muted">(sólo licitación "no adjudicada")</span>
+    <input type="text" name="analisis_interno" style="width:100%">
+  </label>
+  <fieldset style="border:1px solid var(--line);border-radius:8px;padding:8px 10px">
+    <legend class="muted">Confirmaciones del paso (marca las que apliquen)</legend>
+    {% for clave, etiqueta in flags_extra %}
+      {% if clave == 'documento_checksum' %}
+        <label style="display:block;font-weight:normal">{{ etiqueta }}
+          <input type="text" name="documento_checksum" style="width:100%">
+        </label>
+      {% else %}
+        <label style="display:flex;flex-direction:row;align-items:center;gap:6px;font-weight:normal">
+          <input type="checkbox" name="{{ clave }}" value="1"> {{ etiqueta }}
+        </label>
+      {% endif %}
+    {% endfor %}
+  </fieldset>
+  <div><button class="btn" type="submit">Aplicar transición</button></div>
+</form>
+{% else %}
+<p class="muted">Este expediente está en un estado terminal ({{ c.estado.value }}); no admite más transiciones.</p>
+{% endif %}
+
+<h2>Editar datos del contrato</h2>
+<form method="post" action="/panel/contratos/{{ c.id }}/editar" class="grid2" style="display:grid">
+  <label>Contraparte
+    <select name="contraparte_id">
+      <option value="">— sin definir —</option>
+      {% for cp in contrapartes %}<option value="{{ cp.id }}" {{ 'selected' if c.contraparte_id==cp.id }}>{{ cp.razon_social }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Abogado responsable
+    <select name="abogado_id">
+      <option value="">— sin asignar —</option>
+      {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if c.abogado_id==u.id }}>{{ u.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Administrador del contrato
+    <select name="administrador_id">
+      <option value="">— sin asignar —</option>
+      {% for u in usuarios %}<option value="{{ u.id }}" {{ 'selected' if c.administrador_id==u.id }}>{{ u.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Monto <input type="number" step="0.01" name="monto" value="{{ c.monto or '' }}"></label>
+  <label>Moneda
+    <select name="moneda">
+      <option value="">—</option>
+      {% for m in monedas %}<option value="{{ m.value }}" {{ 'selected' if c.moneda and c.moneda.value==m.value }}>{{ m.value }}</option>{% endfor %}
+    </select>
+  </label>
+  <label style="flex-direction:row;align-items:center;gap:6px">
+    <input type="checkbox" name="requiere_garantia" value="1" {{ 'checked' if c.requiere_garantia }}> Exige garantía antes de firmar
+  </label>
+  <label>Inicio de vigencia <input type="date" name="fecha_inicio_vigencia" value="{{ c.fecha_inicio_vigencia or '' }}"></label>
+  <label>Fin de vigencia <input type="date" name="fecha_fin_vigencia" value="{{ c.fecha_fin_vigencia or '' }}"></label>
+  <label style="flex-direction:row;align-items:center;gap:6px">
+    <input type="checkbox" name="vigencia_indefinida" value="1" {{ 'checked' if c.vigencia_indefinida }}> Vigencia indefinida
+  </label>
+  <label>Tipo de renovación
+    <select name="tipo_renovacion">
+      {% for r in renovaciones %}<option value="{{ r.value }}" {{ 'selected' if c.tipo_renovacion.value==r.value }}>{{ r.value }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Aviso previo (días) <input type="number" name="aviso_previo_dias" value="{{ c.aviso_previo_dias }}"></label>
+  <label style="grid-column:1/-1">Causales de término
+    <textarea name="causales_termino" rows="2" style="width:100%">{{ c.causales_termino or '' }}</textarea>
+  </label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Guardar cambios</button></div>
+</form>
 
 <h2>Línea de tiempo</h2>
 <ol class="tl">
@@ -52,6 +140,27 @@
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">—</p>{% endif %}
+
+<details style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar garantía</summary>
+<form method="post" action="/panel/contratos/{{ c.id }}/garantias" class="grid2" style="display:grid;margin-top:8px">
+  <label>Tipo
+    <select name="tipo" required>{% for t in garantia_tipos %}<option value="{{ t.value }}">{{ t.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Instrumento
+    <select name="instrumento" required>{% for i in garantia_instrumentos %}<option value="{{ i.value }}">{{ i.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Emisor <input type="text" name="emisor"></label>
+  <label>Número <input type="text" name="numero"></label>
+  <label>Monto <input type="number" step="0.01" name="monto" required></label>
+  <label>Moneda
+    <select name="moneda" required>{% for m in monedas %}<option value="{{ m.value }}">{{ m.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Emisión <input type="date" name="fecha_emision" required></label>
+  <label>Vencimiento <input type="date" name="fecha_vencimiento" required></label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Agregar garantía</button></div>
+</form>
+</details>
 
 <h2>Hitos</h2>
 {% if f.hitos %}

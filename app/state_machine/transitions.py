@@ -156,3 +156,18 @@ def buscar(
             continue
         return t
     return None
+
+
+def transiciones_disponibles(desde: str, linea_val: Optional[str]) -> list[str]:
+    """Estados destino alcanzables desde `desde` para esa línea (para armar el formulario
+    de avance del panel web). No incluye 'descartado' (siempre disponible aparte) ni
+    resuelve el caso especial de 'aclaraciones' (ver `app/web/routes.py`)."""
+    vistos: list[str] = []
+    for t in TRANSICIONES_CONTRATO:
+        if t.desde != desde:
+            continue
+        if t.lineas and (linea_val is None or linea_val not in t.lineas):
+            continue
+        if t.hacia not in vistos:
+            vistos.append(t.hacia)
+    return vistos

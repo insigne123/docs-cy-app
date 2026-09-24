@@ -5,6 +5,7 @@
 {% if error == 'inactivo' %}<p class="n-critica">Usuario inactivo. Contacta al administrador.</p>
 {% elif error %}<p class="n-critica">Credenciales inválidas.</p>{% endif %}
 <form method="post" action="/login" class="filtros" style="max-width:340px;flex-direction:column;align-items:stretch">
+  {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
   <label>Email <input type="email" name="email" required></label>
   <label>Contraseña <input type="password" name="password" required></label>
   <button class="btn" type="submit">Entrar</button>

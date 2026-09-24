@@ -5,6 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.enums import (
@@ -19,6 +20,18 @@ from app.models.contrato import Contrato
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.models.evento import EventoEstado
 from app.services.parametros import obtener_parametro
+
+
+def generar_codigo(session: Session, prefijo: str = "CT") -> str:
+    """Código correlativo único (`CT-2026-0001`), usado por el formulario web y el
+    importador de planillas cuando no se indica un `codigo_externo`."""
+    anio = date.today().year
+    n = session.query(Contrato).count() + 1
+    while True:
+        codigo = f"{prefijo}-{anio}-{n:04d}"
+        if session.scalars(select(Contrato.id).where(Contrato.codigo == codigo)).first() is None:
+            return codigo
+        n += 1
 
 
 def calcular_requiere_gerencia(

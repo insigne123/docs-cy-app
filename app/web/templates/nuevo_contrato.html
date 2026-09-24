@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block title %}Nueva solicitud · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>Nueva solicitud</h1>
+<div class="sub">
+  Solicitante: <strong>{{ usuario.nombre }}</strong> ({{ usuario.rol.value }}). Ingresa aquí una
+  solicitud de Flujo Regular o Autogestionado. Las licitaciones (Flujo Completo) se crean
+  desde su propio módulo.
+</div>
+
+{% if error %}<p class="n-critica">{{ error }}</p>{% endif %}
+
+<form method="post" action="/panel/contratos/nuevo" class="grid2" style="display:grid">
+  <label>Flujo
+    <select name="linea" required>
+      {% for l in lineas %}
+      <option value="{{ l.value }}">{{ nombre_linea(l.value) }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Unidad solicitante
+    <select name="unidad_solicitante_id" required>
+      {% for u in unidades %}<option value="{{ u.id }}">{{ u.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Contraparte
+    <select name="contraparte_id">
+      <option value="">(sin definir todavía)</option>
+      {% for c in contrapartes %}<option value="{{ c.id }}">{{ c.razon_social }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Formato estándar <span class="muted">(obligatorio para Flujo Autogestionado)</span>
+    <select name="formato_id">
+      <option value="">— no aplica —</option>
+      {% for f in formatos %}<option value="{{ f.id }}">{{ f.nombre }} (v{{ f.version }})</option>{% endfor %}
+    </select>
+  </label>
+  <label style="grid-column:1/-1">Objeto del contrato
+    <textarea name="objeto" required rows="2" style="width:100%"></textarea>
+  </label>
+  <label>Categoría
+    <select name="categoria">
+      <option value="">— sin categoría —</option>
+      {% for c in categorias %}<option value="{{ c.value }}">{{ c.value }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Monto <input type="number" step="0.01" name="monto"></label>
+  <label>Moneda
+    <select name="moneda">
+      <option value="">—</option>
+      {% for m in monedas %}<option value="{{ m.value }}">{{ m.value }}</option>{% endfor %}
+    </select>
+  </label>
+  <label style="flex-direction:row;align-items:center;gap:6px">
+    <input type="checkbox" name="requiere_garantia" value="1"> Exige garantía de cumplimiento antes de firmar
+  </label>
+  <div style="grid-column:1/-1">
+    <button class="btn" type="submit">Crear solicitud</button>
+  </div>
+</form>
+
+{% if not unidades %}
+<p class="muted">No hay unidades registradas todavía — créalas desde <code>/docs</code>
+  (<code>POST /unidades</code>) antes de continuar.</p>
+{% endif %}
+{% endblock %}
