@@ -110,14 +110,14 @@ def reporte_xlsx(datos: dict) -> bytes:
     for f in filas:
         ws.append(f)
 
-    dcols = ["Código", "Línea", "Estado", "Contraparte", "Unidad", "Administrador", "Monto",
+    dcols = ["Código", "Flujo", "Estado", "Contraparte", "Unidad", "Administrador", "Monto",
              "Moneda", "Ingreso", "Firma", "Fin vigencia", "Días", "Semáforo"]
     for nombre, filas_c in (("Detalle", datos["detalle"]), ("Vencen en el mes", datos["vencen_en_el_mes"])):
         w = wb.create_sheet(nombre)
         w.append(dcols)
         for c in filas_c:
             w.append([
-                c["codigo"], c["linea"], c["estado"], c["contraparte"], c["unidad"],
+                c["codigo"], c["linea_nombre"], c["estado"], c["contraparte"], c["unidad"],
                 c["administrador"], c["monto"], c["moneda"],
                 c["fecha_ingreso"].isoformat() if c["fecha_ingreso"] else "",
                 c["fecha_firma"].isoformat() if c["fecha_firma"] else "",
@@ -205,10 +205,10 @@ def reporte_pdf(datos: dict) -> bytes:
 
     tabla(
         "Contratos - estado de avance y vigencia",
-        ["Código", "Línea", "Estado", "Contraparte", "Monto", "Fin vig.", "Días", "Semáforo"],
-        [26, 22, 26, 55, 30, 24, 16, 30],
+        ["Código", "Flujo", "Estado", "Contraparte", "Monto", "Fin vig.", "Días", "Semáforo"],
+        [26, 30, 26, 51, 30, 24, 16, 30],
         [
-            [c["codigo"], c["linea"], c["estado"], c["contraparte"],
+            [c["codigo"], c["linea_nombre"], c["estado"], c["contraparte"],
              f"{c['moneda'] or ''} {c['monto'] or ''}".strip(),
              c["fecha_fin_vigencia"] or ("indefinida" if c["vigencia_indefinida"] else "-"),
              c["dias_para_vencer"] if c["dias_para_vencer"] is not None else "-",

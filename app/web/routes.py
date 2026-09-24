@@ -13,6 +13,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import COOKIE_SESION, get_db, obtener_o_404, usuario_actual
 from app.config import settings
+from app.enums import nombre_linea
 from app.models.contrato import Contrato
 from app.models.core import Contraparte, Unidad, Usuario
 from app.services.alertas import calcular_alertas, resumen_alertas
@@ -142,6 +143,7 @@ def detalle(cid: int, request: Request, db: Session = Depends(get_db)):
         "unidad": _nombre(Unidad, contrato.unidad_solicitante_id, "nombre"),
         "administrador": _nombre(Usuario, contrato.administrador_id, "nombre"),
         "abogado": _nombre(Usuario, contrato.abogado_id, "nombre"),
+        "linea_nombre": nombre_linea(contrato.linea.value),
     }
     return templates.TemplateResponse(
         request=request,

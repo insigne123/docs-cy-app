@@ -8,7 +8,14 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.enums import ESTADOS_CONTRATO_TERMINALES, EstadoContrato, LineaContrato, TipoRenovacion
+from app.enums import (
+    ESTADOS_CONTRATO_TERMINALES,
+    NOMBRES_LINEA,
+    EstadoContrato,
+    LineaContrato,
+    TipoRenovacion,
+    nombre_linea,
+)
 from app.models.contrato import Contrato
 from app.models.core import Contraparte, Unidad, Usuario
 from app.services.parametros import obtener_parametro
@@ -160,6 +167,7 @@ def construir_dashboard(
                 "id": c.id,
                 "codigo": c.codigo,
                 "linea": c.linea.value,
+                "linea_nombre": nombre_linea(c.linea.value),
                 "estado": c.estado.value,
                 "objeto": c.objeto,
                 "contraparte": nombres_cp.get(c.contraparte_id),
@@ -224,7 +232,7 @@ def construir_dashboard(
 
 def opciones_filtros(session: Session) -> dict:
     return {
-        "lineas": [e.value for e in LineaContrato],
+        "lineas": [{"value": e.value, "nombre": NOMBRES_LINEA[e.value]} for e in LineaContrato],
         "estados": [e.value for e in EstadoContrato],
         "agrupaciones": list(AGRUPACIONES),
         "unidades": [

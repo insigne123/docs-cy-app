@@ -51,6 +51,19 @@ class LineaContrato(_StrEnum):
     C_licitacion = "C_licitacion"
 
 
+# Nombres para mostrar en el panel y los reportes (el valor interno del enum no cambia:
+# ya está persistido en la base de datos de producción).
+NOMBRES_LINEA: dict[str, str] = {
+    LineaContrato.A_regular.value: "Flujo Regular",
+    LineaContrato.B_autogestionado.value: "Flujo Autogestionado",
+    LineaContrato.C_licitacion.value: "Flujo Completo",
+}
+
+
+def nombre_linea(valor: str) -> str:
+    return NOMBRES_LINEA.get(valor, valor)
+
+
 class CategoriaContrato(_StrEnum):
     servicio = "servicio"
     suministro = "suministro"
