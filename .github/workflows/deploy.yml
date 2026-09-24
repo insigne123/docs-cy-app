@@ -39,9 +39,9 @@ jobs:
       - uses: google-github-actions/setup-gcloud@v2
       - name: Build y push imagen
         run: |-
-          gcloud builds submit \
-            --tag "$IMAGE:$GITHUB_SHA" \
-            --project "$GCP_PROJECT" --region "$REGION" --quiet
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+          docker build -t "$IMAGE:$GITHUB_SHA" .
+          docker push "$IMAGE:$GITHUB_SHA"
       - name: Deploy a Cloud Run
         run: |-
           gcloud run deploy "$SERVICE" \
