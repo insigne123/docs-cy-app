@@ -1,7 +1,10 @@
 """Construcción de la aplicación FastAPI."""
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import Depends, FastAPI
+from fastapi.staticfiles import StaticFiles
 from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.deps import guardia
@@ -35,6 +38,9 @@ def create_app() -> FastAPI:
     # en X-Forwarded-*; sin esto la app creería que todo es http interno.
     app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
     registrar_manejadores(app)
+
+    estaticos = Path(__file__).resolve().parent.parent / "web" / "static"
+    app.mount("/static", StaticFiles(directory=estaticos), name="static")
 
     # Sin guardia: login (el propio mecanismo de auth) y /health para monitoreo.
     app.include_router(auth.router)

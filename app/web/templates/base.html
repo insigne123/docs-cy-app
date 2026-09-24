@@ -16,10 +16,18 @@
       --gray:#4b5563; --gray-bg:#eceef1;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:var(--bg);color:var(--ink);
+    body{margin:0;background:var(--bg) url('/static/img/pattern-legal.svg') repeat;color:var(--ink);
       font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
     a{color:var(--navy)}
-    .shell{display:flex;align-items:stretch;min-height:100vh}
+    .masthead{position:relative;height:84px;overflow:hidden;flex:0 0 auto}
+    .masthead img{width:100%;height:100%;object-fit:cover;object-position:50% 38%;display:block}
+    .masthead .overlay{position:absolute;inset:0;
+      background:linear-gradient(90deg,rgba(31,59,91,.92),rgba(31,59,91,.62) 55%,rgba(31,59,91,.25));
+      display:flex;align-items:center;padding:0 20px}
+    .masthead .overlay strong{color:#fff;font-size:17px;letter-spacing:.02em}
+    .masthead .overlay span{color:#cfd9e6;font-size:11px;display:block}
+    .page{display:flex;flex-direction:column;min-height:100vh}
+    .shell{display:flex;align-items:stretch;flex:1 1 auto}
     .sidebar{flex:0 0 210px;width:210px;background:var(--card);border-right:1px solid var(--line);
       padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow:hidden;white-space:nowrap}
     .sidebar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px}
@@ -33,7 +41,7 @@
     .sidebar nav a.active{background:var(--info-bg);color:var(--navy);font-weight:600}
     .sidebar nav a .n{margin-left:auto;background:var(--bad-bg);color:var(--bad);border-radius:999px;
       font-size:11px;padding:1px 6px}
-    .sidebar-reopen{position:fixed;left:10px;top:14px;z-index:5;display:none}
+    .sidebar-reopen{position:fixed;left:10px;top:96px;z-index:5;display:none}
     html.nav-collapsed .sidebar{flex-basis:0;width:0;padding-left:0;padding-right:0;border-right:0}
     html.nav-collapsed .sidebar-reopen{display:block}
     .wrap{flex:1 1 auto;min-width:0;max-width:1200px;margin:0 auto;padding:20px}
@@ -89,6 +97,13 @@
   </style>
 </head>
 <body>
+  <div class="page">
+  <header class="masthead">
+    <img src="/static/img/masthead-biblioteca.jpg" alt="">
+    <div class="overlay">
+      <div><strong>Sistema de Contratos y Licitaciones</strong><span>Gestión documental y jurídica</span></div>
+    </div>
+  </header>
   <div class="shell">
     {% if request.url.path != '/login' %}
     <aside class="sidebar" id="sidebar">
@@ -111,6 +126,7 @@
     <div class="wrap">
       {% block body %}{% endblock %}
     </div>
+  </div>
   </div>
   <script>
     (function () {

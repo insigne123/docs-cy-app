@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="260" height="260" viewBox="0 0 260 260">
+  <g fill="none" stroke="#1f3b5b" stroke-opacity="0.03" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <!-- carpeta de documentos -->
+    <path d="M20 30h20l6 8h24v34H20z"/>
+    <line x1="28" y1="50" x2="62" y2="50"/>
+    <line x1="28" y1="58" x2="54" y2="58"/>
+    <!-- balanza de la justicia -->
+    <line x1="180" y1="70" x2="180" y2="130"/>
+    <line x1="162" y1="82" x2="198" y2="82"/>
+    <path d="M162 82l-8 20a8 8 0 0 0 16 0z"/>
+    <path d="M198 82l-8 20a8 8 0 0 0 16 0z"/>
+    <line x1="168" y1="134" x2="192" y2="134"/>
+    <!-- libro -->
+    <path d="M30 160c6-4 14-4 20 0v26c-6-4-14-4-20 0z"/>
+    <path d="M70 160c-6-4-14-4-20 0v26c6-4 14-4 20 0z"/>
+    <!-- pila de documentos -->
+    <rect x="150" y="190" width="34" height="8" rx="1.5"/>
+    <rect x="154" y="200" width="34" height="8" rx="1.5"/>
+    <rect x="158" y="210" width="34" height="8" rx="1.5"/>
+  </g>
+</svg>
