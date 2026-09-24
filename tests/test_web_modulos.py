@@ -165,6 +165,46 @@ def test_terminar_contrato_desde_vigencias(api, session, usuarios, cartera):
     assert c.estado.value == "terminado"
 
 
+def test_crear_unidad_desde_catalogos(api, session, usuarios):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        "/panel/catalogos/unidades",
+        data={"nombre": "Compras", "tipo": "interna"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    from sqlalchemy import select
+    from app.models.core import Unidad
+    u = session.scalars(select(Unidad).where(Unidad.nombre == "Compras")).first()
+    assert u is not None and u.tipo.value == "interna"
+
+    # Ahora debe aparecer en el combo de "Nueva solicitud".
+    r = api.get("/panel/contratos/nuevo")
+    assert "Compras" in r.text
+
+
+def test_crear_unidad_duplicada_muestra_error(api, session, usuarios, unidad):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        "/panel/catalogos/unidades",
+        data={"nombre": unidad.nombre, "tipo": "solicitante"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+
+
+def test_crear_contraparte_desde_catalogos(api, session, usuarios):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        "/panel/catalogos/contrapartes",
+        data={"razon_social": "Logística Andina Ltda.", "tipo": "proveedor", "rut": "76.111.222-3"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    r = api.get("/panel/catalogos")
+    assert "Logística Andina Ltda." in r.text
+
+
 def test_licitacion_activa_aparece_en_tablero(api, session, usuarios, unidad):
     _login(api, session, usuarios, rol=Rol.admin_licitaciones)
     r = api.post(

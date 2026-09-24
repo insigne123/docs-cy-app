@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Catálogos · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>Catálogos</h1>
+<div class="sub">
+  Datos maestros que alimentan los formularios del resto de los módulos (unidad
+  solicitante, contraparte). Si un desplegable de "Nueva solicitud" o "Nueva
+  licitación" aparece vacío, créalo primero aquí.
+</div>
+
+{% if ok %}<p class="s-vigente" style="display:inline-block;padding:4px 10px;border-radius:8px">{{ ok }}</p>{% endif %}
+{% if error %}<p class="n-critica">{{ error }}</p>{% endif %}
+
+<h2>Unidades solicitantes</h2>
+{% if unidades %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Nombre</th><th>Tipo</th></tr></thead>
+  <tbody>
+  {% for u in unidades %}
+  <tr><td>{{ u.nombre }}</td><td>{{ u.tipo.value }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">No hay unidades registradas todavía.</p>{% endif %}
+
+<details {{ 'open' if not unidades }} style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar unidad</summary>
+<form method="post" action="/panel/catalogos/unidades" class="grid2" style="display:grid;margin-top:8px">
+  <label>Nombre <input type="text" name="nombre" required></label>
+  <label>Tipo
+    <select name="tipo" required>{% for t in unidad_tipos %}<option value="{{ t.value }}">{{ t.value }}</option>{% endfor %}</select>
+  </label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Crear unidad</button></div>
+</form>
+</details>
+
+<h2>Contrapartes</h2>
+{% if contrapartes %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Razón social</th><th>Tipo</th><th>RUT</th><th>Contacto</th></tr></thead>
+  <tbody>
+  {% for c in contrapartes %}
+  <tr><td>{{ c.razon_social }}</td><td>{{ c.tipo.value }}</td><td>{{ c.rut or '—' }}</td>
+    <td>{{ c.contacto_nombre or '—' }}{% if c.contacto_email %} · {{ c.contacto_email }}{% endif %}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">No hay contrapartes registradas todavía.</p>{% endif %}
+
+<details style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar contraparte</summary>
+<form method="post" action="/panel/catalogos/contrapartes" class="grid2" style="display:grid;margin-top:8px">
+  <label>Razón social <input type="text" name="razon_social" required></label>
+  <label>Tipo
+    <select name="tipo" required>{% for t in contraparte_tipos %}<option value="{{ t.value }}">{{ t.value }}</option>{% endfor %}</select>
+  </label>
+  <label>RUT <input type="text" name="rut"></label>
+  <label>Contacto (nombre) <input type="text" name="contacto_nombre"></label>
+  <label>Contacto (email) <input type="email" name="contacto_email"></label>
+  <label>Contacto (teléfono) <input type="text" name="contacto_telefono"></label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Crear contraparte</button></div>
+</form>
+</details>
+{% endblock %}

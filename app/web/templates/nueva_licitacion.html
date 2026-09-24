@@ -41,4 +41,8 @@
     <button class="btn" type="submit">Crear licitación</button>
   </div>
 </form>
+
+{% if not unidades %}
+<p class="muted">No hay unidades registradas todavía — <a href="/panel/catalogos">créalas en Catálogos</a> antes de continuar.</p>
+{% endif %}
 {% endblock %}

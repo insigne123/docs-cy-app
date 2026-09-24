@@ -11,12 +11,14 @@ from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Res
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.api.deps import COOKIE_SESION, get_db, obtener_o_404, usuario_actual
 from app.config import settings
 from app.enums import (
     CategoriaContrato,
+    ContraparteTipo,
     EstadoContrato,
     EstadoLicitacion,
     GarantiaEstado,
@@ -25,6 +27,7 @@ from app.enums import (
     LineaContrato,
     Moneda,
     TipoRenovacion,
+    UnidadTipo,
     nombre_linea,
 )
 from app.models.contrato import Contrato, Garantia
@@ -651,6 +654,73 @@ def agregar_garantia_licitacion_submit(
     except (ValueError, InvalidOperation) as exc:
         return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Garantía inválida: ' + str(exc))}", status_code=303)
     return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Garantía agregada')}", status_code=303)
+
+
+@router.get("/panel/catalogos", response_class=HTMLResponse, include_in_schema=False)
+def panel_catalogos(request: Request, db: Session = Depends(get_db), error: Optional[str] = None, ok: Optional[str] = None):
+    """Alta de los datos maestros que alimentan los desplegables del resto de los
+    módulos (unidad solicitante, contraparte). Antes solo se podían crear por /docs
+    (Swagger); esta es la vía normal para un usuario que no es desarrollador."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    return templates.TemplateResponse(
+        request=request,
+        name="catalogos.html",
+        context={
+            "usuario": usuario, "error": error, "ok": ok,
+            "unidad_tipos": list(UnidadTipo),
+            "contraparte_tipos": list(ContraparteTipo),
+            **_catalogos_basicos(db),
+        },
+        headers=SIN_CACHE,
+    )
+
+
+@router.post("/panel/catalogos/unidades", include_in_schema=False)
+def crear_unidad_submit(
+    request: Request,
+    db: Session = Depends(get_db),
+    nombre: str = Form(...),
+    tipo: str = Form(...),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    try:
+        db.add(Unidad(nombre=nombre.strip(), tipo=UnidadTipo(tipo)))
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo crear la unidad: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Unidad creada')}", status_code=303)
+
+
+@router.post("/panel/catalogos/contrapartes", include_in_schema=False)
+def crear_contraparte_submit(
+    request: Request,
+    db: Session = Depends(get_db),
+    razon_social: str = Form(...),
+    tipo: str = Form(...),
+    rut: Optional[str] = Form(None),
+    contacto_nombre: Optional[str] = Form(None),
+    contacto_email: Optional[str] = Form(None),
+    contacto_telefono: Optional[str] = Form(None),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    try:
+        db.add(Contraparte(
+            razon_social=razon_social.strip(), tipo=ContraparteTipo(tipo),
+            rut=rut or None, contacto_nombre=contacto_nombre or None,
+            contacto_email=contacto_email or None, contacto_telefono=contacto_telefono or None,
+        ))
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo crear la contraparte: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Contraparte creada')}", status_code=303)
 
 
 @router.get("/panel/reporte", include_in_schema=False)
