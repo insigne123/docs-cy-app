@@ -1,0 +1,56 @@
+name: CI + Deploy docs-cy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  GCP_PROJECT: yago-axis-prod
+  REGION: us-central1
+  SERVICE: docs-cy2
+  IMAGE: us-central1-docker.pkg.dev/yago-axis-prod/cloud-run-source-deploy/docs-cy
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r requirements-dev.txt
+      - run: pytest -q
+
+  deploy:
+    needs: test
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/249381032700/locations/global/workloadIdentityPools/github-pool/providers/github-provider
+          service_account: docs-cy-deployer@yago-axis-prod.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build y push imagen
+        run: |-
+          gcloud builds submit \
+            --tag "$IMAGE:$GITHUB_SHA" \
+            --project "$GCP_PROJECT" --region "$REGION" --quiet
+      - name: Deploy a Cloud Run
+        run: |-
+          gcloud run deploy "$SERVICE" \
+            --image "$IMAGE:$GITHUB_SHA" \
+            --region "$REGION" --project "$GCP_PROJECT" \
+            --port 8080 --no-allow-unauthenticated \
+            --update-env-vars "AUTH_REQUIRED=true,SECRET_KEY=${{ secrets.APP_SECRET_KEY }},DATABASE_URL=${{ secrets.PROD_DATABASE_URL }}" \
+            --quiet
+          # Mantiene el paso de Firebase Hosting -> Cloud Run (igual que AXIS)
+          gcloud run services update "$SERVICE" \
+            --region "$REGION" --project "$GCP_PROJECT" \
+            --update-annotations "run.googleapis.com/invoker-iam-disabled=true" --quiet
+      - name: Verificar salud
+        run: |-
+          curl -fsS "https://docs-cy.web.app/health" | grep -q '"status":"ok"'

@@ -30,7 +30,7 @@ def main() -> None:
     if len(sys.argv) < 3:
         print('uso: python -m scripts.crear_admin <email> "<clave>" ["Nombre"] [rol]')
         raise SystemExit(2)
-    email = sys.argv[1]
+    email = sys.argv[1].strip().lower()
     clave = sys.argv[2]
     nombre = sys.argv[3] if len(sys.argv) > 3 else email.split("@")[0]
     rol = Rol(sys.argv[4]) if len(sys.argv) > 4 else Rol.admin_sistema

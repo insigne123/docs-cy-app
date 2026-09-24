@@ -57,6 +57,8 @@ def obtener_unidad(uid: int, db: Session = Depends(get_db)):
 @router.post("/usuarios", response_model=UsuarioOut, status_code=201)
 def crear_usuario(payload: UsuarioIn, db: Session = Depends(get_db)):
     datos = payload.model_dump()
+    if datos.get("email"):
+        datos["email"] = datos["email"].strip().lower()
     clave = datos.pop("password", None)
     usuario = Usuario(**datos)
     if clave:

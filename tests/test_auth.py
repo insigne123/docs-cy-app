@@ -50,7 +50,7 @@ def test_login_y_proteccion(api, session, usuarios, unidad, contraparte, monkeyp
     assert api.get("/alertas").status_code == 401
     assert api.get("/metricas").status_code == 401
     r = api.get("/panel.json", follow_redirects=False)
-    assert r.status_code in (303, 307) and r.headers["location"] == "/login"
+    assert r.status_code == 401 and r.json()["detail"] == "Autenticación requerida"
 
 
 def test_crear_usuario_con_password(api):
@@ -61,3 +61,30 @@ def test_crear_usuario_con_password(api):
     assert r.status_code == 201
     tok = api.post("/auth/login", json={"email": "ana@empresa.cl", "password": "hola12345"}).json()
     assert "token" in tok
+
+
+def test_login_web_cookie_y_email_normalizado(session):
+    """Flujo web real: POST /login fija __session y el panel la acepta (vía https)."""
+    from fastapi.testclient import TestClient
+
+    from app.api.app import create_app
+    from app.api.deps import get_db
+    from app.models.core import Usuario
+
+    session.add(Usuario(
+        nombre="Admin", email="admin@empresa.cl", rol=Rol.admin_sistema,
+        activo=True, password_hash=hash_password("Secreta123"),
+    ))
+    session.commit()
+    app = create_app()
+    app.dependency_overrides[get_db] = lambda: session
+    try:
+        with TestClient(app, base_url="https://testserver", follow_redirects=False) as web:
+            r = web.post("/login", data={"email": "  ADMIN@empresa.cl ", "password": "Secreta123"})
+            assert r.status_code == 303 and r.headers["location"] == "/panel"
+            assert "__session" in r.cookies
+            r2 = web.get("/panel")
+            assert r2.status_code == 200
+            assert "Panel de Contratos y Licitaciones" in r2.text
+    finally:
+        app.dependency_overrides.clear()

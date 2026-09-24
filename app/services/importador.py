@@ -129,6 +129,7 @@ def _unidad(session: Session, nombre: str, res: ResultadoImportacion) -> Unidad:
 
 
 def _usuario(session: Session, email: str, rol: Rol, res: ResultadoImportacion) -> Usuario:
+    email = email.strip().lower()
     u = session.scalars(select(Usuario).where(Usuario.email == email)).first()
     if u is None:
         u = Usuario(nombre=email.split("@")[0], email=email, rol=rol, activo=True)

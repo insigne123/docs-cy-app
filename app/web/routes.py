@@ -5,13 +5,13 @@ from datetime import date
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, Depends, Form, Query, Request, Response
+from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, obtener_o_404, usuario_actual
+from app.api.deps import COOKIE_SESION, get_db, obtener_o_404, usuario_actual
 from app.config import settings
 from app.models.contrato import Contrato
 from app.models.core import Contraparte, Unidad, Usuario
@@ -62,9 +62,12 @@ def filtros_panel(
     }
 
 
+SIN_CACHE = {"Cache-Control": "private, no-store"}
+
+
 def _requiere_login(request: Request, db: Session) -> Optional[RedirectResponse]:
     if settings.auth_required and usuario_actual(request, db) is None:
-        return RedirectResponse(url="/login", status_code=303)
+        return RedirectResponse(url="/login", status_code=303, headers=SIN_CACHE)
     return None
 
 
@@ -87,6 +90,7 @@ def panel(request: Request, filtros: dict = Depends(filtros_panel), db: Session 
             "filtros": filtros,
             "alertas": resumen_alertas(db),
         },
+        headers=SIN_CACHE,
     )
 
 
@@ -94,8 +98,8 @@ def panel(request: Request, filtros: dict = Depends(filtros_panel), db: Session 
 def panel_json(
     request: Request, filtros: dict = Depends(filtros_panel), db: Session = Depends(get_db)
 ):
-    if (r := _requiere_login(request, db)) is not None:
-        return r
+    if settings.auth_required and usuario_actual(request, db) is None:
+        raise HTTPException(status_code=401, detail="Autenticación requerida")
     return construir_dashboard(db, **filtros)
 
 
@@ -107,6 +111,7 @@ def panel_alertas(request: Request, db: Session = Depends(get_db)):
         request=request,
         name="alertas.html",
         context={"alertas": calcular_alertas(db), "resumen": resumen_alertas(db)},
+        headers=SIN_CACHE,
     )
 
 
@@ -115,7 +120,8 @@ def panel_metricas(request: Request, db: Session = Depends(get_db)):
     if (r := _requiere_login(request, db)) is not None:
         return r
     return templates.TemplateResponse(
-        request=request, name="metricas.html", context={"m": metricas_proceso(db)}
+        request=request, name="metricas.html", context={"m": metricas_proceso(db)},
+        headers=SIN_CACHE,
     )
 
 
@@ -141,6 +147,7 @@ def detalle(cid: int, request: Request, db: Session = Depends(get_db)):
         request=request,
         name="detalle.html",
         context={"f": ficha, "refs": refs, "semaforo": semaforo, "nivel": nivel, "dias": dias},
+        headers=SIN_CACHE,
     )
 
 
@@ -179,13 +186,21 @@ def login_submit(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
+    email = email.strip().lower()
     usuario = db.scalars(select(Usuario).where(Usuario.email == email)).first()
     if usuario is None or not verify_password(password, usuario.password_hash):
         return RedirectResponse(url="/login?error=1", status_code=303)
-    resp = RedirectResponse(url="/panel", status_code=303)
+    if not usuario.activo:
+        return RedirectResponse(url="/login?error=inactivo", status_code=303)
+    resp = RedirectResponse(url="/panel", status_code=303, headers=SIN_CACHE)
     resp.set_cookie(
-        "token", crear_token(usuario.id), httponly=True, samesite="lax",
+        COOKIE_SESION,
+        crear_token(usuario.id),
+        httponly=True,
+        samesite="lax",
         secure=settings.auth_required,  # en producción (AUTH_REQUIRED=true) se sirve por HTTPS
+        path="/",
+        max_age=8 * 3600,
     )
     return resp
 
@@ -193,5 +208,5 @@ def login_submit(
 @router.get("/logout", include_in_schema=False)
 def logout():
     resp = RedirectResponse(url="/login", status_code=303)
-    resp.delete_cookie("token")
+    resp.delete_cookie(COOKIE_SESION, path="/", samesite="lax", secure=settings.auth_required)
     return resp

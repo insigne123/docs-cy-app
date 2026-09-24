@@ -20,7 +20,8 @@ class LoginIn(BaseModel):
 
 @router.post("/login")
 def login(payload: LoginIn, db: Session = Depends(get_db)):
-    usuario = db.scalars(select(Usuario).where(Usuario.email == payload.email)).first()
+    email = payload.email.strip().lower()
+    usuario = db.scalars(select(Usuario).where(Usuario.email == email)).first()
     if usuario is None or not verify_password(payload.password, usuario.password_hash):
         raise HTTPException(status_code=401, detail="Credenciales inválidas")
     if not usuario.activo:

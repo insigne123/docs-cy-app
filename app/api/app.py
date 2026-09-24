@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from fastapi import Depends, FastAPI
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 
 from app.api.deps import guardia
 from app.api.errors import registrar_manejadores
@@ -14,15 +15,25 @@ from app.api.routers import (
     licitaciones,
     metricas,
 )
+from app.config import settings
 from app.web import routes as web_routes
+
+_CLAVE_EJEMPLO = "dev-inseguro-cambiar-en-produccion"
 
 
 def create_app() -> FastAPI:
+    if settings.auth_required and settings.secret_key == _CLAVE_EJEMPLO:
+        raise RuntimeError(
+            "AUTH_REQUIRED=true exige una SECRET_KEY real (no la de ejemplo)."
+        )
     app = FastAPI(
         title="Sistema de Contratos y Licitaciones",
         version="0.5.0",
         description="API REST + importador + panel web + alertas + reportes + métricas.",
     )
+    # Detrás de Firebase Hosting / Cloud Run el esquema e IP reales llegan
+    # en X-Forwarded-*; sin esto la app creería que todo es http interno.
+    app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
     registrar_manejadores(app)
 
     # Sin guardia: login (el propio mecanismo de auth) y /health para monitoreo.

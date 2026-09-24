@@ -2,7 +2,8 @@
 {% block title %}Ingreso · Panel de Contratos{% endblock %}
 {% block body %}
 <h1>Ingreso</h1>
-{% if error %}<p class="n-critica">Credenciales inválidas.</p>{% endif %}
+{% if error == 'inactivo' %}<p class="n-critica">Usuario inactivo. Contacta al administrador.</p>
+{% elif error %}<p class="n-critica">Credenciales inválidas.</p>{% endif %}
 <form method="post" action="/login" class="filtros" style="max-width:340px;flex-direction:column;align-items:stretch">
   <label>Email <input type="email" name="email" required></label>
   <label>Contraseña <input type="password" name="password" required></label>

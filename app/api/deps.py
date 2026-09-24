@@ -1,6 +1,8 @@
 """Dependencias de FastAPI."""
 from __future__ import annotations
 
+import logging
+
 from typing import Iterator, Optional
 
 from fastapi import Depends, HTTPException, Request
@@ -10,6 +12,12 @@ from app.config import settings
 from app.database import SessionLocal
 from app.models.core import Usuario
 from app.services.auth import leer_token
+
+log = logging.getLogger(__name__)
+
+# Nombre de la cookie de sesión. Firebase Hosting solo reenvía a Cloud Run
+# las cookies llamadas `__session`; cualquier otro nombre se pierde en el proxy.
+COOKIE_SESION = "__session"
 
 
 def get_db() -> Iterator[Session]:
@@ -32,10 +40,13 @@ def usuario_actual(request: Request, db: Session = Depends(get_db)) -> Optional[
     cabecera = request.headers.get("Authorization", "")
     if cabecera.startswith("Bearer "):
         token = cabecera[7:]
-    token = token or request.cookies.get("token")
+    token = token or request.cookies.get(COOKIE_SESION)
     if not token:
         return None
     uid = leer_token(token)
+    if uid is None:
+        log.warning("token de sesión inválido o expirado")
+        return None
     return db.get(Usuario, uid) if uid else None
 
 
