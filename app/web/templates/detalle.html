@@ -35,7 +35,15 @@
 <form method="post" action="/panel/contratos/{{ c.id }}/transicion" class="filtros" style="flex-direction:column;align-items:stretch;max-width:640px">
   <label>Nuevo estado
     <select name="hacia" required>
-      {% for o in opciones_transicion %}<option value="{{ o }}">{{ o.replace('_',' ') }}</option>{% endfor %}
+      {% for o in opciones_transicion %}
+        {% if c.estado.value == 'vigente' and o == 'vigente' %}
+          <option value="vigente">Renovar (nueva fecha de fin de vigencia)</option>
+        {% elif c.estado.value == 'vigente' and o == 'terminado' %}
+          <option value="terminado">Terminar contrato (cierre definitivo)</option>
+        {% else %}
+          <option value="{{ o }}">{{ o.replace('_',' ') }}</option>
+        {% endif %}
+      {% endfor %}
       {% if puede_descartar %}<option value="descartado">descartado (cierre definitivo)</option>{% endif %}
     </select>
   </label>

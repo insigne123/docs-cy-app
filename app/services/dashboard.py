@@ -230,6 +230,15 @@ def construir_dashboard(
     }
 
 
+def listar_vigentes_para_gestion(session: Session, hoy: Optional[date] = None) -> list[dict]:
+    """Contratos en estado 'vigente', ordenados por urgencia (vencidos y por vencer
+    primero; indefinidos al final) — para el módulo de Gestión de Vigencias."""
+    datos = construir_dashboard(session, agrupacion="vencimiento", estado=EstadoContrato.vigente.value, hoy=hoy)
+    filas = [c for g in datos["grupos"] for c in g["contratos"]]
+    filas.sort(key=lambda c: (c["dias_para_vencer"] is None, c["dias_para_vencer"] if c["dias_para_vencer"] is not None else 0))
+    return filas
+
+
 def opciones_filtros(session: Session) -> dict:
     return {
         "lineas": [{"value": e.value, "nombre": NOMBRES_LINEA[e.value]} for e in LineaContrato],

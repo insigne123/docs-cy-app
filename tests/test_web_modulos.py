@@ -124,6 +124,61 @@ def test_agregar_garantia_y_transicion(api, session, usuarios, unidad, contrapar
     assert c.estado.value == "firma"
 
 
+def test_vigencias_lista_ordenada_por_urgencia(api, session, usuarios, cartera):
+    _login(api, session, usuarios, rol=Rol.admin_contratos)
+    r = api.get("/panel/vigencias")
+    assert r.status_code == 200
+    texto = r.text
+    # El vencido debe listarse antes que el vigente sin urgencia (orden por días).
+    assert texto.index("C-VENCIDO") < texto.index("C-VIG")
+    assert "C-TRAMITE" not in texto  # no está 'vigente', no pertenece a este módulo
+
+
+def test_renovar_contrato_desde_vigencias(api, session, usuarios, cartera):
+    _login(api, session, usuarios, rol=Rol.admin_contratos)
+    cid = cartera["PORVENCER"]
+    r = api.post(
+        f"/panel/contratos/{cid}/transicion",
+        data={"hacia": "vigente", "nueva_fecha_fin": "2030-01-01"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    from app.models.contrato import Contrato
+    c = session.get(Contrato, cid)
+    session.refresh(c)
+    assert c.fecha_fin_vigencia.isoformat() == "2030-01-01"
+    assert c.estado.value == "vigente"
+
+
+def test_terminar_contrato_desde_vigencias(api, session, usuarios, cartera):
+    _login(api, session, usuarios, rol=Rol.admin_contratos)
+    cid = cartera["VENCIDO"]
+    r = api.post(
+        f"/panel/contratos/{cid}/transicion",
+        data={"hacia": "terminado", "comentario": "Contrato vencido sin renovación"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    from app.models.contrato import Contrato
+    c = session.get(Contrato, cid)
+    session.refresh(c)
+    assert c.estado.value == "terminado"
+
+
+def test_licitacion_activa_aparece_en_tablero(api, session, usuarios, unidad):
+    _login(api, session, usuarios, rol=Rol.admin_licitaciones)
+    r = api.post(
+        "/panel/licitaciones/nuevo",
+        data={"objeto": "Servicio de vigilancia", "unidad_solicitante_id": str(unidad.id), "moneda": "CLP"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    r = api.get("/panel")
+    assert r.status_code == 200
+    assert "Licitaciones en curso" in r.text
+    assert "Servicio de vigilancia" in r.text
+
+
 def test_transicion_a_aclaraciones_desde_ingreso(api, session, usuarios, unidad, contraparte):
     """Regresión: elegir 'aclaraciones' como destino debe funcionar sin un checkbox
     aparte de 'completitud' (se deriva del estado elegido, ver routes.py)."""

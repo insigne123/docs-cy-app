@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Gestión de Vigencias · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>Gestión de Vigencias</h1>
+<div class="sub">
+  {{ filas|length }} contrato(s) vigente(s), ordenados por urgencia. Renovar cambia la
+  fecha de fin de vigencia; Terminar cierra el contrato definitivamente.
+</div>
+
+{% if not filas %}
+  <div class="empty">No hay contratos vigentes.</div>
+{% endif %}
+
+{% for c in filas %}
+<section style="margin-bottom:14px;padding:12px;border:1px solid var(--line);border-radius:10px">
+  <div style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:baseline">
+    <div>
+      <a href="/panel/contratos/{{ c.id }}"><strong>{{ c.codigo }}</strong></a>
+      <span class="badge l-{{ c.linea }}">{{ c.linea_nombre }}</span>
+      <span class="badge s-{{ c.semaforo }}">{{ c.semaforo.replace('_',' ') }}</span>
+      <div class="muted">{{ c.objeto }} · {{ c.contraparte or '—' }}</div>
+    </div>
+    <div style="text-align:right">
+      <div>Fin vigencia: <strong>{{ c.fecha_fin_vigencia.strftime('%Y-%m-%d') if c.fecha_fin_vigencia else ('indefinida' if c.vigencia_indefinida else '—') }}</strong></div>
+      <div class="muted">{{ c.dias_para_vencer ~ ' día(s)' if c.dias_para_vencer is not none else '—' }} · renovación {{ c.tipo_renovacion.replace('_',' ') }}</div>
+    </div>
+  </div>
+
+  <div style="display:flex;gap:24px;flex-wrap:wrap;margin-top:10px">
+    <form method="post" action="/panel/contratos/{{ c.id }}/transicion" style="display:flex;gap:6px;align-items:center">
+      <input type="hidden" name="hacia" value="vigente">
+      <label class="muted" style="font-weight:normal">Renovar hasta
+        <input type="date" name="nueva_fecha_fin" required>
+      </label>
+      <button class="btn ghost" type="submit">Renovar</button>
+    </form>
+    <form method="post" action="/panel/contratos/{{ c.id }}/transicion" style="display:flex;gap:6px;align-items:center"
+          onsubmit="return confirm('¿Terminar definitivamente el contrato {{ c.codigo }}?');">
+      <input type="hidden" name="hacia" value="terminado">
+      <label class="muted" style="font-weight:normal">Causal
+        <input type="text" name="comentario" placeholder="Motivo del término" required>
+      </label>
+      <button class="btn ghost" type="submit">Terminar</button>
+    </form>
+  </div>
+</section>
+{% endfor %}
+{% endblock %}

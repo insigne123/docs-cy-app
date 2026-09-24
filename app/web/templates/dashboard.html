@@ -14,6 +14,7 @@
   <a class="badge s-vigente" href="/panel/alertas">Sin alertas</a>
   {% endif %}
   <a href="/panel/metricas">Métricas de proceso</a>
+  <a href="/panel/vigencias">Gestión de vigencias</a>
   <a class="btn" href="/panel/contratos/nuevo">+ Nueva solicitud</a>
   <a class="btn ghost" href="/panel/licitaciones/nuevo">+ Nueva licitación</a>
   <form class="rep" method="get" action="/panel/reporte">
@@ -90,6 +91,27 @@
   <button class="btn" type="submit">Filtrar</button>
   <a class="btn ghost" href="/panel">Limpiar</a>
 </form>
+
+{% if licitaciones_activas %}
+<section>
+  <h2>Licitaciones en curso <span class="muted">({{ licitaciones_activas|length }})</span></h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Código</th><th>Objeto</th><th>Estado</th><th>Ingreso</th></tr></thead>
+      <tbody>
+      {% for l in licitaciones_activas %}
+        <tr>
+          <td><a href="/panel/licitaciones/{{ l.id }}">{{ l.codigo }}</a></td>
+          <td class="obj">{{ l.objeto }}</td>
+          <td>{{ l.estado.value.replace('_',' ') }}</td>
+          <td>{{ l.fecha_ingreso.strftime('%Y-%m-%d') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
 
 {% if not datos.grupos %}
   <div class="empty">Sin contratos para los filtros seleccionados.</div>

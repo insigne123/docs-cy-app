@@ -12,6 +12,7 @@ from app.enums import (
     EstadoContrato,
     EstadoLicitacion,
     LicitacionFase,
+    LicitacionResultado,
     LineaContrato,
     Moneda,
 )
@@ -20,6 +21,18 @@ from app.models.core import Contraparte, Unidad, Usuario
 from app.models.evento import EventoEstado
 from app.models.licitacion import Licitacion
 from app.state_machine.engine import MotorEstados
+
+
+def listar_activas(session: Session) -> list[Licitacion]:
+    """Licitaciones en Fase I (pre-adjudicación) que aún no llegan a un resultado
+    definitivo — para mostrarlas en el tablero junto a los contratos."""
+    return list(
+        session.scalars(
+            select(Licitacion)
+            .where(Licitacion.resultado == LicitacionResultado.en_proceso)
+            .order_by(Licitacion.fecha_ingreso.desc())
+        )
+    )
 
 
 def generar_codigo_licitacion(session: Session) -> str:

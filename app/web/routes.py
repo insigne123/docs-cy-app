@@ -34,8 +34,13 @@ from app.services.alertas import calcular_alertas, resumen_alertas
 from app.services.auth import crear_token, verify_password
 from app.services.consultas import ficha_contrato, ficha_licitacion
 from app.services.contratos import calcular_requiere_gerencia, crear_contrato, generar_codigo
-from app.services.dashboard import construir_dashboard, opciones_filtros, semaforo_de
-from app.services.licitaciones import adjudicar_licitacion, crear_licitacion, generar_codigo_licitacion
+from app.services.dashboard import construir_dashboard, listar_vigentes_para_gestion, opciones_filtros, semaforo_de
+from app.services.licitaciones import (
+    adjudicar_licitacion,
+    crear_licitacion,
+    generar_codigo_licitacion,
+    listar_activas as listar_licitaciones_activas,
+)
 from app.services.metricas import metricas_proceso
 from app.services.reportes import generar_reporte_mensual
 from app.state_machine import ErrorTransicion, MotorEstados
@@ -155,7 +160,22 @@ def panel(request: Request, filtros: dict = Depends(filtros_panel), db: Session 
             "opciones": opciones_filtros(db),
             "filtros": filtros,
             "alertas": resumen_alertas(db),
+            "licitaciones_activas": listar_licitaciones_activas(db)[:8],
         },
+        headers=SIN_CACHE,
+    )
+
+
+@router.get("/panel/vigencias", response_class=HTMLResponse, include_in_schema=False)
+def panel_vigencias(request: Request, db: Session = Depends(get_db)):
+    """Módulo de Gestión de Vigencias: contratos vigentes ordenados por urgencia,
+    con acciones directas de renovar / terminar (ver services/dashboard.py)."""
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    return templates.TemplateResponse(
+        request=request,
+        name="vigencias.html",
+        context={"filas": listar_vigentes_para_gestion(db)},
         headers=SIN_CACHE,
     )
 
