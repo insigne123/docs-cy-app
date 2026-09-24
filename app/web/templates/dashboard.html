@@ -13,11 +13,6 @@
   {% else %}
   <a class="badge s-vigente" href="/panel/alertas">Sin alertas</a>
   {% endif %}
-  <a href="/panel/metricas">Métricas de proceso</a>
-  <a href="/panel/vigencias">Gestión de vigencias</a>
-  <a href="/panel/catalogos">Catálogos</a>
-  <a class="btn" href="/panel/contratos/nuevo">+ Nueva solicitud</a>
-  <a class="btn ghost" href="/panel/licitaciones/nuevo">+ Nueva licitación</a>
   <form class="rep" method="get" action="/panel/reporte">
     <input type="month" name="periodo" value="{{ datos.hoy.strftime('%Y-%m') }}" required>
     <select name="formato"><option value="xlsx">XLSX</option><option value="pdf">PDF</option></select>

@@ -4,6 +4,9 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{% block title %}Panel de Contratos{% endblock %}</title>
+  <script>
+    try { if (localStorage.getItem('sidebarCollapsed') === '1') document.documentElement.classList.add('nav-collapsed'); } catch (e) {}
+  </script>
   <style>
     :root{
       --bg:#f6f7f8; --card:#fff; --ink:#1c1e21; --muted:#6b7280; --line:#e3e6ea;
@@ -16,7 +19,24 @@
     body{margin:0;background:var(--bg);color:var(--ink);
       font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
     a{color:var(--navy)}
-    .wrap{max-width:1200px;margin:0 auto;padding:20px}
+    .shell{display:flex;align-items:stretch;min-height:100vh}
+    .sidebar{flex:0 0 210px;width:210px;background:var(--card);border-right:1px solid var(--line);
+      padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow:hidden;white-space:nowrap}
+    .sidebar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px}
+    .sidebar-head .brand{font-weight:700;font-size:14px}
+    .sidebar-toggle,.sidebar-reopen{background:none;border:1px solid var(--line);border-radius:6px;
+      cursor:pointer;font-size:14px;padding:4px 8px;line-height:1;color:var(--ink)}
+    .sidebar nav{display:flex;flex-direction:column;gap:2px}
+    .sidebar nav a{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:7px;
+      color:var(--ink);text-decoration:none;font-size:13px}
+    .sidebar nav a:hover{background:var(--bg)}
+    .sidebar nav a.active{background:var(--info-bg);color:var(--navy);font-weight:600}
+    .sidebar nav a .n{margin-left:auto;background:var(--bad-bg);color:var(--bad);border-radius:999px;
+      font-size:11px;padding:1px 6px}
+    .sidebar-reopen{position:fixed;left:10px;top:14px;z-index:5;display:none}
+    html.nav-collapsed .sidebar{flex-basis:0;width:0;padding-left:0;padding-right:0;border-right:0}
+    html.nav-collapsed .sidebar-reopen{display:block}
+    .wrap{flex:1 1 auto;min-width:0;max-width:1200px;margin:0 auto;padding:20px}
     h1{font-size:22px;margin:0 0 2px}
     h2{font-size:16px;margin:22px 0 8px}
     .sub{color:var(--muted);font-size:12px;margin-bottom:16px}
@@ -69,8 +89,41 @@
   </style>
 </head>
 <body>
-  <div class="wrap">
-    {% block body %}{% endblock %}
+  <div class="shell">
+    {% if request.url.path != '/login' %}
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <span class="brand">Contratos</span>
+        <button type="button" class="sidebar-toggle" id="sidebar-toggle" title="Ocultar menú">&#10094;</button>
+      </div>
+      <nav>
+        <a href="/panel" class="{{ 'active' if request.url.path == '/panel' }}">Tablero</a>
+        <a href="/panel/contratos/nuevo" class="{{ 'active' if request.url.path == '/panel/contratos/nuevo' }}">+ Nueva solicitud</a>
+        <a href="/panel/licitaciones/nuevo" class="{{ 'active' if request.url.path == '/panel/licitaciones/nuevo' }}">+ Nueva licitación</a>
+        <a href="/panel/vigencias" class="{{ 'active' if request.url.path == '/panel/vigencias' }}">Gestión de vigencias</a>
+        <a href="/panel/catalogos" class="{{ 'active' if request.url.path == '/panel/catalogos' }}">Catálogos</a>
+        <a href="/panel/metricas" class="{{ 'active' if request.url.path == '/panel/metricas' }}">Métricas de proceso</a>
+        <a href="/panel/alertas" class="{{ 'active' if request.url.path == '/panel/alertas' }}">Alertas</a>
+      </nav>
+    </aside>
+    <button type="button" class="sidebar-reopen" id="sidebar-reopen" title="Mostrar menú">&#9776;</button>
+    {% endif %}
+    <div class="wrap">
+      {% block body %}{% endblock %}
+    </div>
   </div>
+  <script>
+    (function () {
+      var html = document.documentElement;
+      function set(collapsed) {
+        html.classList.toggle('nav-collapsed', collapsed);
+        try { localStorage.setItem('sidebarCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+      }
+      var toggle = document.getElementById('sidebar-toggle');
+      var reopen = document.getElementById('sidebar-reopen');
+      if (toggle) toggle.addEventListener('click', function () { set(true); });
+      if (reopen) reopen.addEventListener('click', function () { set(false); });
+    })();
+  </script>
 </body>
 </html>
