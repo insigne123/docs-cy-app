@@ -124,6 +124,73 @@ def test_agregar_garantia_y_transicion(api, session, usuarios, unidad, contrapar
     assert c.estado.value == "firma"
 
 
+def test_agregar_hito_y_marcar_cumplido(api, session, usuarios, unidad, contraparte):
+    u = _login(api, session, usuarios, rol=Rol.admin_contratos)
+    from app.enums import LineaContrato
+    from app.services.contratos import crear_contrato
+
+    c = crear_contrato(
+        session, codigo="CT-WEB-4", linea=LineaContrato.A_regular, objeto="x",
+        unidad_solicitante=unidad, solicitante=usuarios[Rol.unidad_solicitante], contraparte=contraparte,
+    )
+    session.commit()
+
+    r = api.post(
+        f"/panel/contratos/{c.id}/hitos",
+        data={"tipo": "entregable", "nombre": "Entrega parcial", "fecha_planificada": "2026-12-01"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+
+    from sqlalchemy import select
+    from app.models.contrato import Hito
+    hito = session.scalars(select(Hito).where(Hito.contrato_id == c.id)).first()
+    assert hito is not None and hito.estado.value == "pendiente"
+
+    r = api.post(
+        f"/panel/contratos/{c.id}/hitos/{hito.id}/estado",
+        data={"estado": "cumplido"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(hito)
+    assert hito.estado.value == "cumplido"
+    assert hito.fecha_real is not None
+
+
+def test_agregar_multa_y_cambiar_estado(api, session, usuarios, unidad, contraparte):
+    _login(api, session, usuarios, rol=Rol.financiera)
+    from app.enums import LineaContrato
+    from app.services.contratos import crear_contrato
+
+    c = crear_contrato(
+        session, codigo="CT-WEB-5", linea=LineaContrato.A_regular, objeto="x",
+        unidad_solicitante=unidad, solicitante=usuarios[Rol.unidad_solicitante], contraparte=contraparte,
+    )
+    session.commit()
+
+    r = api.post(
+        f"/panel/contratos/{c.id}/multas",
+        data={"descripcion": "Atraso en entrega", "monto": "50000", "moneda": "CLP", "fecha_aplicacion": "2026-11-01"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+
+    from sqlalchemy import select
+    from app.models.contrato import Multa
+    multa = session.scalars(select(Multa).where(Multa.contrato_id == c.id)).first()
+    assert multa is not None and multa.estado.value == "propuesta"
+
+    r = api.post(
+        f"/panel/contratos/{c.id}/multas/{multa.id}/estado",
+        data={"estado": "aplicada"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(multa)
+    assert multa.estado.value == "aplicada"
+
+
 def test_vigencias_lista_ordenada_por_urgencia(api, session, usuarios, cartera):
     _login(api, session, usuarios, rol=Rol.admin_contratos)
     r = api.get("/panel/vigencias")

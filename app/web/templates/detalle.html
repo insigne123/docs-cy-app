@@ -173,28 +173,72 @@
 <h2>Hitos</h2>
 {% if f.hitos %}
 <div class="tabla-scroll"><table>
-  <thead><tr><th>Tipo</th><th>Nombre</th><th>Planificada</th><th>Real</th><th>Estado</th></tr></thead>
+  <thead><tr><th>Tipo</th><th>Nombre</th><th>Planificada</th><th>Real</th><th>Estado</th><th>Cambiar a</th></tr></thead>
   <tbody>
   {% for h in f.hitos %}
   <tr><td>{{ h.tipo.value }}</td><td>{{ h.nombre }}</td>
     <td>{{ h.fecha_planificada.strftime('%Y-%m-%d') }}</td>
     <td>{{ h.fecha_real.strftime('%Y-%m-%d') if h.fecha_real else '—' }}</td>
-    <td>{{ h.estado.value }}</td></tr>
+    <td>{{ h.estado.value }}</td>
+    <td>
+      <form method="post" action="/panel/contratos/{{ c.id }}/hitos/{{ h.id }}/estado" style="display:flex;gap:4px">
+        <select name="estado">{% for e in hito_estados %}<option value="{{ e.value }}" {{ 'selected' if e.value==h.estado.value }}>{{ e.value }}</option>{% endfor %}</select>
+        <button class="btn ghost" type="submit">Guardar</button>
+      </form>
+    </td></tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">—</p>{% endif %}
 
+<details style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar hito</summary>
+<form method="post" action="/panel/contratos/{{ c.id }}/hitos" class="grid2" style="display:grid;margin-top:8px">
+  <label>Tipo
+    <select name="tipo" required>{% for t in hito_tipos %}<option value="{{ t.value }}">{{ t.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Nombre <input type="text" name="nombre" required></label>
+  <label>Fecha planificada <input type="date" name="fecha_planificada" required></label>
+  <label>Responsable
+    <select name="responsable_id">
+      <option value="">— sin asignar —</option>
+      {% for u in usuarios %}<option value="{{ u.id }}">{{ u.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  <label style="grid-column:1/-1">Notas <input type="text" name="notas" style="width:100%"></label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Agregar hito</button></div>
+</form>
+</details>
+
 <h2>Multas</h2>
 {% if f.multas %}
 <div class="tabla-scroll"><table>
-  <thead><tr><th>Descripción</th><th>Monto</th><th>Fecha</th><th>Estado</th></tr></thead>
+  <thead><tr><th>Descripción</th><th>Monto</th><th>Fecha</th><th>Estado</th><th>Cambiar a</th></tr></thead>
   <tbody>
   {% for m in f.multas %}
   <tr><td>{{ m.descripcion }}</td><td>{{ m.moneda.value }} {{ '{:,.0f}'.format(m.monto|float) }}</td>
-    <td>{{ m.fecha_aplicacion.strftime('%Y-%m-%d') }}</td><td>{{ m.estado.value }}</td></tr>
+    <td>{{ m.fecha_aplicacion.strftime('%Y-%m-%d') }}</td><td>{{ m.estado.value }}</td>
+    <td>
+      <form method="post" action="/panel/contratos/{{ c.id }}/multas/{{ m.id }}/estado" style="display:flex;gap:4px">
+        <select name="estado">{% for e in multa_estados %}<option value="{{ e.value }}" {{ 'selected' if e.value==m.estado.value }}>{{ e.value }}</option>{% endfor %}</select>
+        <button class="btn ghost" type="submit">Guardar</button>
+      </form>
+    </td></tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">—</p>{% endif %}
+
+<details style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar multa</summary>
+<form method="post" action="/panel/contratos/{{ c.id }}/multas" class="grid2" style="display:grid;margin-top:8px">
+  <label style="grid-column:1/-1">Descripción <input type="text" name="descripcion" required style="width:100%"></label>
+  <label>Monto <input type="number" step="0.01" name="monto" required></label>
+  <label>Moneda
+    <select name="moneda" required>{% for m in monedas %}<option value="{{ m.value }}">{{ m.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Fecha de aplicación <input type="date" name="fecha_aplicacion" required></label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Agregar multa</button></div>
+</form>
+</details>
 
 <h2>Documentos</h2>
 {% if f.documentos %}

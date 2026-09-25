@@ -24,13 +24,16 @@ from app.enums import (
     GarantiaEstado,
     GarantiaInstrumento,
     GarantiaTipo,
+    HitoEstado,
+    HitoTipo,
     LineaContrato,
     Moneda,
+    MultaEstado,
     TipoRenovacion,
     UnidadTipo,
     nombre_linea,
 )
-from app.models.contrato import Contrato, Garantia
+from app.models.contrato import Contrato, Garantia, Hito, Multa
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
@@ -338,6 +341,9 @@ def detalle(
             "renovaciones": list(TipoRenovacion),
             "garantia_tipos": list(GarantiaTipo),
             "garantia_instrumentos": list(GarantiaInstrumento),
+            "hito_tipos": list(HitoTipo),
+            "hito_estados": list(HitoEstado),
+            "multa_estados": list(MultaEstado),
             **_catalogos_basicos(db),
         },
         headers=SIN_CACHE,
@@ -425,6 +431,91 @@ def agregar_garantia_submit(
     except (ValueError, InvalidOperation) as exc:
         return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('Garantía inválida: ' + str(exc))}", status_code=303)
     return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Garantía agregada')}", status_code=303)
+
+
+@router.post("/panel/contratos/{cid}/hitos", include_in_schema=False)
+def agregar_hito_submit(
+    cid: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    tipo: str = Form(...),
+    nombre: str = Form(...),
+    fecha_planificada: str = Form(...),
+    responsable_id: Optional[str] = Form(None),
+    notas: Optional[str] = Form(None),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    obtener_o_404(db, Contrato, cid, "Contrato")
+    try:
+        db.add(Hito(
+            contrato_id=cid, tipo=HitoTipo(tipo), nombre=nombre,
+            fecha_planificada=date.fromisoformat(fecha_planificada),
+            responsable_id=int(responsable_id) if responsable_id else None,
+            notas=notas or None,
+        ))
+        db.commit()
+    except ValueError as exc:
+        return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('Hito inválido: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Hito agregado')}", status_code=303)
+
+
+@router.post("/panel/contratos/{cid}/hitos/{hid}/estado", include_in_schema=False)
+def actualizar_estado_hito_submit(
+    cid: int, hid: int, request: Request, db: Session = Depends(get_db), estado: str = Form(...),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    hito = obtener_o_404(db, Hito, hid, "Hito")
+    if hito.contrato_id != cid:
+        raise HTTPException(status_code=404, detail="Hito no pertenece a este contrato")
+    hito.estado = HitoEstado(estado)
+    if hito.estado == HitoEstado.cumplido and hito.fecha_real is None:
+        hito.fecha_real = date.today()
+    db.commit()
+    return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Hito actualizado')}", status_code=303)
+
+
+@router.post("/panel/contratos/{cid}/multas", include_in_schema=False)
+def agregar_multa_submit(
+    cid: int,
+    request: Request,
+    db: Session = Depends(get_db),
+    descripcion: str = Form(...),
+    monto: str = Form(...),
+    moneda: str = Form(...),
+    fecha_aplicacion: str = Form(...),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    obtener_o_404(db, Contrato, cid, "Contrato")
+    try:
+        db.add(Multa(
+            contrato_id=cid, descripcion=descripcion, monto=Decimal(monto), moneda=Moneda(moneda),
+            fecha_aplicacion=date.fromisoformat(fecha_aplicacion),
+        ))
+        db.commit()
+    except (ValueError, InvalidOperation) as exc:
+        return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('Multa inválida: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Multa agregada')}", status_code=303)
+
+
+@router.post("/panel/contratos/{cid}/multas/{mid}/estado", include_in_schema=False)
+def actualizar_estado_multa_submit(
+    cid: int, mid: int, request: Request, db: Session = Depends(get_db), estado: str = Form(...),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    multa = obtener_o_404(db, Multa, mid, "Multa")
+    if multa.contrato_id != cid:
+        raise HTTPException(status_code=404, detail="Multa no pertenece a este contrato")
+    multa.estado = MultaEstado(estado)
+    db.commit()
+    return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Multa actualizada')}", status_code=303)
 
 
 @router.post("/panel/contratos/{cid}/transicion", include_in_schema=False)
