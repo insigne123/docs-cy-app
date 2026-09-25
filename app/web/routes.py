@@ -61,8 +61,22 @@ from app.services.reportes import generar_reporte_mensual
 from app.state_machine import ErrorTransicion, MotorEstados
 from app.state_machine.transitions import transiciones_disponibles, transiciones_disponibles_licitacion
 
+def _usuario_sesion(request: Request):
+    """Global de Jinja: usuario de la sesión actual (o None), para mostrar su
+    nombre y el botón de cerrar sesión en el menú lateral en toda página, sin
+    tener que pasar 'usuario' por el contexto de cada ruta."""
+    from app.database import SessionLocal
+
+    db = SessionLocal()
+    try:
+        return usuario_actual(request, db)
+    finally:
+        db.close()
+
+
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
 templates.env.globals["icono_rol"] = icono_rol
+templates.env.globals["usuario_sesion"] = _usuario_sesion
 router = APIRouter(tags=["panel"])
 
 # Sólo estas dos líneas se crean directo como contrato; Flujo Completo (licitación)

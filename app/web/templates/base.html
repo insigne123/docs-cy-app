@@ -36,8 +36,9 @@
     .page{display:flex;flex-direction:column;min-height:100vh}
     .shell{display:flex;align-items:stretch;flex:1 1 auto}
     .sidebar{flex:0 0 218px;width:218px;background:var(--card);border-right:1px solid var(--line);
-      padding:16px 12px;display:flex;flex-direction:column;gap:2px;overflow:hidden;white-space:nowrap;
-      transition:flex-basis .16s ease,width .16s ease,padding .16s ease}
+      padding:16px 12px;display:flex;flex-direction:column;gap:2px;white-space:nowrap;
+      transition:flex-basis .16s ease,width .16s ease,padding .16s ease;
+      position:sticky;top:96px;height:calc(100vh - 96px);overflow-y:auto;overflow-x:hidden}
     .sidebar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px}
     .sidebar-head .brand{font-weight:800;font-size:14.5px;letter-spacing:.01em;color:var(--navy-dark)}
     .sidebar-toggle,.sidebar-reopen{background:#fff;border:1px solid var(--line);border-radius:8px;
@@ -52,6 +53,18 @@
     .sidebar nav a.active svg{color:var(--navy)}
     .sidebar nav a .n{margin-left:auto;background:var(--bad);color:#fff;border-radius:999px;
       font-size:10.5px;font-weight:700;padding:1px 6px}
+    .sidebar-foot{margin-top:auto;padding-top:10px;border-top:1px solid var(--line);
+      display:flex;align-items:center;gap:8px}
+    .sidebar-foot .who{display:flex;align-items:center;gap:8px;min-width:0;flex:1 1 auto}
+    .sidebar-foot .avatar{flex:0 0 auto;font-size:16px;width:30px;height:30px;border-radius:50%;
+      background:var(--info-bg);display:flex;align-items:center;justify-content:center}
+    .sidebar-foot .txt{display:flex;flex-direction:column;min-width:0;font-size:12.5px;line-height:1.35}
+    .sidebar-foot .txt strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+    .sidebar-foot .txt .muted{font-size:11px;text-transform:capitalize}
+    .logout-link{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:30px;height:30px;
+      border-radius:8px;color:var(--muted);text-decoration:none;transition:background .12s ease,color .12s ease}
+    .logout-link svg{width:16px;height:16px}
+    .logout-link:hover{background:var(--bad-bg);color:var(--bad)}
     .sidebar-reopen{position:fixed;left:10px;top:108px;z-index:5;display:none}
     html.nav-collapsed .sidebar{flex-basis:0;width:0;padding-left:0;padding-right:0;border-right:0}
     html.nav-collapsed .sidebar-reopen{display:block}
@@ -166,6 +179,18 @@
           Alertas
         </a>
       </nav>
+      {% set _u = usuario_sesion(request) %}
+      {% if _u %}
+      <div class="sidebar-foot">
+        <div class="who">
+          <span class="avatar">{{ icono_rol(_u.rol.value) }}</span>
+          <span class="txt"><strong>{{ _u.nombre }}</strong><span class="muted">{{ _u.rol.value }}</span></span>
+        </div>
+        <a href="/logout" class="logout-link" title="Cerrar sesión">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        </a>
+      </div>
+      {% endif %}
     </aside>
     <button type="button" class="sidebar-reopen" id="sidebar-reopen" title="Mostrar menú">&#9776;</button>
     {% endif %}

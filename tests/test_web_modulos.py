@@ -346,6 +346,20 @@ def test_crear_usuario_email_duplicado_muestra_error(api, session, usuarios):
     assert r.status_code == 303 and "error=" in r.headers["location"]
 
 
+def test_boton_cerrar_sesion_visible_tras_login(api, session, usuarios):
+    u = _login(api, session, usuarios, rol=Rol.admin_contratos)
+    r = api.get("/panel")
+    assert r.status_code == 200
+    assert 'href="/logout"' in r.text
+    assert u.nombre in r.text
+
+    r = api.get("/logout", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/login"
+
+    r = api.get("/panel/contratos/nuevo", follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"].startswith("/login")
+
+
 def test_licitacion_activa_aparece_en_tablero(api, session, usuarios, unidad):
     _login(api, session, usuarios, rol=Rol.admin_licitaciones)
     r = api.post(
