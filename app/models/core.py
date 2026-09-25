@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date
 from typing import Optional
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, JSON, String, Text, UniqueConstraint
+from sqlalchemy import Boolean, Date, ForeignKey, Integer, JSON, LargeBinary, String, Text, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.enums import ContraparteTipo, Rol, UnidadTipo
@@ -68,3 +68,9 @@ class FormatoEstandar(Base, TimestampMixin):
     campos_variables: Mapped[list] = mapped_column(JSON, default=list)
     ruta_plantilla: Mapped[str] = mapped_column(String(255))
     checksum_base: Mapped[str] = mapped_column(String(128))
+    # Contenido real del archivo subido, para poder previsualizarlo desde el
+    # panel (antes solo se guardaba el checksum). Nulo en formatos creados
+    # antes de esta funcionalidad.
+    nombre_archivo: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    content_type: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    contenido: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)

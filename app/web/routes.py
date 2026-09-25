@@ -1007,6 +1007,8 @@ async def crear_formato_submit(
             aprobado_por=aprobado_por.strip(), fecha_aprobacion=date.fromisoformat(fecha_aprobacion),
             campos_variables=[c.strip() for c in (campos_variables or "").split(",") if c.strip()],
             ruta_plantilla=ruta_plantilla.strip(), checksum_base=sha256_bytes(contenido),
+            nombre_archivo=plantilla_archivo.filename, content_type=plantilla_archivo.content_type,
+            contenido=contenido,
         ))
         db.commit()
     except (ValueError, IntegrityError) as exc:
@@ -1158,6 +1160,9 @@ async def editar_formato_submit(
             contenido = await plantilla_archivo.read()
             if contenido:
                 formato.checksum_base = sha256_bytes(contenido)
+                formato.nombre_archivo = plantilla_archivo.filename
+                formato.content_type = plantilla_archivo.content_type
+                formato.contenido = contenido
         db.commit()
     except (ValueError, IntegrityError) as exc:
         db.rollback()
@@ -1178,6 +1183,25 @@ def eliminar_formato_submit(fid: int, request: Request, db: Session = Depends(ge
     formato.vigente = False
     db.commit()
     return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Formato desactivado')}", status_code=303)
+
+
+@router.get("/panel/catalogos/formatos/{fid}/plantilla", include_in_schema=False)
+def previsualizar_formato(fid: int, request: Request, db: Session = Depends(get_db)):
+    """Sirve el archivo de la plantilla tal como se subió, para que cualquier
+    usuario autenticado pueda previsualizar el modelo de contrato (con
+    'inline' el navegador lo muestra directo si el tipo lo permite, ej. PDF
+    o texto, en vez de forzar la descarga)."""
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    formato = obtener_o_404(db, FormatoEstandar, fid, "Formato")
+    if not formato.contenido:
+        raise HTTPException(status_code=404, detail="Este formato no tiene una plantilla disponible para previsualizar")
+    nombre_archivo = formato.nombre_archivo or f"{formato.nombre}.bin"
+    return Response(
+        content=formato.contenido,
+        media_type=formato.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'inline; filename="{nombre_archivo}"'},
+    )
 
 
 @router.post("/panel/catalogos/usuarios/{uid}/editar", include_in_schema=False)

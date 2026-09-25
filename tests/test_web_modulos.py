@@ -314,6 +314,29 @@ def test_crear_formato_desde_administracion(api, session, usuarios):
     from app.models.core import FormatoEstandar
     formato = session.scalars(select(FormatoEstandar).where(FormatoEstandar.nombre == "NDA v2")).first()
     assert formato.checksum_base == sha256(b"contenido de prueba del formato").hexdigest()
+    assert formato.contenido == b"contenido de prueba del formato"
+    assert formato.nombre_archivo == "nda_v2.docx"
+
+    # El botón de "Previsualizar" solo aparece cuando hay contenido guardado.
+    r = api.get("/panel/catalogos")
+    assert f"/panel/catalogos/formatos/{formato.id}/plantilla" in r.text
+
+    r = api.get(f"/panel/catalogos/formatos/{formato.id}/plantilla")
+    assert r.status_code == 200
+    assert r.content == b"contenido de prueba del formato"
+    assert "inline" in r.headers["content-disposition"]
+
+
+def test_previsualizar_formato_sin_contenido_da_404(api, session, usuarios, formato):
+    """Los formatos creados antes de esta funcionalidad no tienen contenido
+    guardado (solo el checksum) — se informa con un 404 claro en vez de servir
+    un archivo vacío."""
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.get(f"/panel/catalogos/formatos/{formato.id}/plantilla")
+    assert r.status_code == 404
+
+    r = api.get("/panel/catalogos")
+    assert f"/panel/catalogos/formatos/{formato.id}/plantilla" not in r.text
 
 
 def test_crear_usuario_desde_administracion(api, session, usuarios, unidad):
