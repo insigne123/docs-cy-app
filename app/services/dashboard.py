@@ -177,6 +177,7 @@ def construir_dashboard(
                 "moneda": c.moneda.value if c.moneda else None,
                 "fecha_ingreso": c.fecha_ingreso,
                 "fecha_firma": c.fecha_firma,
+                "fecha_inicio_vigencia": c.fecha_inicio_vigencia,
                 "fecha_fin_vigencia": c.fecha_fin_vigencia,
                 "vigencia_indefinida": c.vigencia_indefinida,
                 "tipo_renovacion": c.tipo_renovacion.value,
@@ -228,6 +229,18 @@ def construir_dashboard(
         },
         "grupos": lista_grupos,
     }
+
+
+def listar_contratos(session: Session, **filtros) -> list[dict]:
+    """Todos los contratos (cualquier estado) en una sola lista plana ordenada
+    por código — para el módulo de Listado de Contratos. A diferencia de
+    construir_dashboard(), no agrupa por mes; acepta los mismos filtros
+    (linea, estado, unidad_id, administrador_id, contraparte_id, desde, hasta)."""
+    filtros.pop("agrupacion", None)
+    datos = construir_dashboard(session, agrupacion="vencimiento", **filtros)
+    filas = [c for g in datos["grupos"] for c in g["contratos"]]
+    filas.sort(key=lambda c: c["codigo"])
+    return filas
 
 
 def listar_vigentes_para_gestion(session: Session, hoy: Optional[date] = None) -> list[dict]:

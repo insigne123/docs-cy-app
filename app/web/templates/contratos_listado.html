@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Listado de Contratos · Panel de Contratos{% endblock %}
+{% block body %}
+<p><a href="/panel">&larr; volver al panel</a></p>
+<h1>Listado de Contratos</h1>
+<div class="sub">
+  {{ filas|length }} contrato(s), cualquier estado, orden por código. Incluye
+  inicio y fin de vigencia y datos básicos de cada uno.
+</div>
+
+<form class="filtros" method="get" action="/panel/contratos">
+  <label>Flujo
+    <select name="linea">
+      <option value="">Todas</option>
+      {% for l in opciones.lineas %}
+      <option value="{{ l.value }}" {{ 'selected' if filtros.linea == l.value }}>{{ l.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Estado
+    <select name="estado">
+      <option value="">Todos</option>
+      {% for e in opciones.estados %}
+      <option value="{{ e }}" {{ 'selected' if filtros.estado == e }}>{{ e }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Unidad
+    <select name="unidad_id">
+      <option value="">Todas</option>
+      {% for u in opciones.unidades %}
+      <option value="{{ u.id }}" {{ 'selected' if filtros.unidad_id == u.id }}>{{ u.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <label>Contraparte
+    <select name="contraparte_id">
+      <option value="">Todas</option>
+      {% for c in opciones.contrapartes %}
+      <option value="{{ c.id }}" {{ 'selected' if filtros.contraparte_id == c.id }}>{{ c.nombre }}</option>
+      {% endfor %}
+    </select>
+  </label>
+  <button class="btn" type="submit">Filtrar</button>
+  <a class="btn ghost" href="/panel/contratos">Limpiar</a>
+</form>
+
+{% if not filas %}
+  <div class="empty">Sin contratos para los filtros seleccionados.</div>
+{% else %}
+<div class="tabla-scroll">
+  <table>
+    <thead><tr>
+      <th>Código</th><th>Objeto</th><th>Contraparte</th><th>Flujo</th><th>Estado</th>
+      <th>Inicio vigencia</th><th>Fin vigencia</th><th>Monto</th><th>Semáforo</th>
+    </tr></thead>
+    <tbody>
+    {% for c in filas %}
+      <tr>
+        <td><a href="/panel/contratos/{{ c.id }}">{{ c.codigo }}</a></td>
+        <td class="obj">{{ c.objeto }}</td>
+        <td>{{ c.contraparte or '—' }}</td>
+        <td><span class="badge l-{{ c.linea }}">{{ c.linea_nombre }}</span></td>
+        <td>{{ c.estado.replace('_',' ') }}</td>
+        <td>{{ c.fecha_inicio_vigencia.strftime('%Y-%m-%d') if c.fecha_inicio_vigencia else '—' }}</td>
+        <td>{{ c.fecha_fin_vigencia.strftime('%Y-%m-%d') if c.fecha_fin_vigencia else ('indefinida' if c.vigencia_indefinida else '—') }}</td>
+        <td>{{ (c.moneda ~ ' ' ~ '{:,.0f}'.format(c.monto|float)) if c.monto else '—' }}</td>
+        <td><span class="badge s-{{ c.semaforo }}">{{ c.semaforo.replace('_',' ') }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+{% endblock %}

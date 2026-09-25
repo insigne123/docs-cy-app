@@ -59,10 +59,13 @@
     h1{font-size:23px;margin:0 0 2px;font-weight:800;letter-spacing:-.01em;color:var(--navy-dark)}
     h2{font-size:16px;margin:26px 0 10px;font-weight:700;color:var(--navy-dark)}
     .sub{color:var(--muted);font-size:12.5px;margin-bottom:18px}
-    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:16px 0}
-    .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow-sm)}
-    .kpi .n{font-size:21px;font-weight:800;color:var(--navy-dark)}
-    .kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px;margin:16px 0}
+    .kpi{container-type:inline-size;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      padding:12px 14px;box-shadow:var(--shadow-sm);min-width:0}
+    .kpi .n{font-size:clamp(15px, 13cqw, 22px);font-weight:800;color:var(--navy-dark);line-height:1.15;
+      overflow-wrap:anywhere;word-break:break-word}
+    .kpi .l{font-size:clamp(9.5px, 6.5cqw, 10.5px);color:var(--muted);text-transform:uppercase;
+      letter-spacing:.04em;font-weight:600;overflow-wrap:anywhere}
     form.filtros{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
       padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:10px;box-shadow:var(--shadow-sm)}
     form.filtros label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);gap:3px;font-weight:600}
@@ -133,6 +136,10 @@
         <a href="/panel" class="{{ 'active' if request.url.path == '/panel' }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
           Tablero
+        </a>
+        <a href="/panel/contratos" class="{{ 'active' if request.url.path == '/panel/contratos' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          Listado de contratos
         </a>
         <a href="/panel/contratos/nuevo" class="{{ 'active' if request.url.path == '/panel/contratos/nuevo' }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13 3v6h6"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>

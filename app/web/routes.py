@@ -42,7 +42,13 @@ from app.services.alertas import calcular_alertas, resumen_alertas
 from app.services.auth import crear_token, hash_password, verify_password
 from app.services.consultas import ficha_contrato, ficha_licitacion
 from app.services.contratos import calcular_requiere_gerencia, crear_contrato, generar_codigo
-from app.services.dashboard import construir_dashboard, listar_vigentes_para_gestion, opciones_filtros, semaforo_de
+from app.services.dashboard import (
+    construir_dashboard,
+    listar_contratos,
+    listar_vigentes_para_gestion,
+    opciones_filtros,
+    semaforo_de,
+)
 from app.services.formatos import sha256_bytes
 from app.services.licitaciones import (
     adjudicar_licitacion,
@@ -171,6 +177,25 @@ def panel(request: Request, filtros: dict = Depends(filtros_panel), db: Session 
             "filtros": filtros,
             "alertas": resumen_alertas(db),
             "licitaciones_activas": listar_licitaciones_activas(db)[:8],
+        },
+        headers=SIN_CACHE,
+    )
+
+
+@router.get("/panel/contratos", response_class=HTMLResponse, include_in_schema=False)
+def panel_listado_contratos(request: Request, filtros: dict = Depends(filtros_panel), db: Session = Depends(get_db)):
+    """Listado plano de todos los contratos (cualquier estado), con sus fechas
+    de inicio y fin de vigencia — a diferencia del tablero, que los agrupa por
+    mes, y de Vigencias, que solo muestra los que están 'vigente'."""
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    return templates.TemplateResponse(
+        request=request,
+        name="contratos_listado.html",
+        context={
+            "filas": listar_contratos(db, **filtros),
+            "opciones": opciones_filtros(db),
+            "filtros": filtros,
         },
         headers=SIN_CACHE,
     )

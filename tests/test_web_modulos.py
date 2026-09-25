@@ -191,6 +191,23 @@ def test_agregar_multa_y_cambiar_estado(api, session, usuarios, unidad, contrapa
     assert multa.estado.value == "aplicada"
 
 
+def test_listado_contratos_muestra_todos_los_estados(api, session, usuarios, cartera):
+    _login(api, session, usuarios, rol=Rol.admin_contratos)
+    r = api.get("/panel/contratos")
+    assert r.status_code == 200
+    texto = r.text
+    for codigo in ("C-VIG", "C-PORVENCER", "C-VENCIDO", "C-RENOV", "C-TRAMITE"):
+        assert codigo in texto
+
+
+def test_listado_contratos_filtra_por_estado(api, session, usuarios, cartera):
+    _login(api, session, usuarios, rol=Rol.admin_contratos)
+    r = api.get("/panel/contratos?estado=vigente")
+    assert r.status_code == 200
+    assert "C-TRAMITE" not in r.text
+    assert "C-VIG" in r.text
+
+
 def test_vigencias_lista_ordenada_por_urgencia(api, session, usuarios, cartera):
     _login(api, session, usuarios, rol=Rol.admin_contratos)
     r = api.get("/panel/vigencias")
