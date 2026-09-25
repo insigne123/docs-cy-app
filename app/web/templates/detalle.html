@@ -128,7 +128,7 @@
   {% for e in f.historial %}
   <li>
     <div>{{ (e.estado_origen or '(inicio)') }} &rarr; <strong>{{ e.estado_destino }}</strong>
-      <span class="muted">· {{ e.rol_actor }}</span></div>
+      <span class="muted">· {{ icono_rol(e.rol_actor) }} {{ e.rol_actor }}</span></div>
     <div class="fecha">{{ e.fecha.strftime('%Y-%m-%d %H:%M') }}{% if e.comentario %} · {{ e.comentario }}{% endif %}
       {% if e.retorno_a %} · retorna a {{ e.retorno_a }}{% endif %}</div>
   </li>

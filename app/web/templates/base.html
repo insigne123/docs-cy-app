@@ -7,66 +7,82 @@
   <script>
     try { if (localStorage.getItem('sidebarCollapsed') === '1') document.documentElement.classList.add('nav-collapsed'); } catch (e) {}
   </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root{
-      --bg:#f6f7f8; --card:#fff; --ink:#1c1e21; --muted:#6b7280; --line:#e3e6ea;
-      --navy:#1f3b5b; --green:#1c7d54; --maroon:#7a2233;
-      --ok:#1c7d54; --ok-bg:#e6f4ec; --warn:#8a5a00; --warn-bg:#fdf0d8;
-      --info:#1f3b5b; --info-bg:#e5ecf5; --bad:#8f1d1d; --bad-bg:#fbe7e7;
+      --bg:#f3f4f7; --card:#fff; --ink:#181b20; --muted:#6b7280; --line:#e5e7eb;
+      --navy:#1f3b5b; --navy-dark:#152a41; --green:#1c7d54; --maroon:#7a2233;
+      --ok:#15784f; --ok-bg:#e3f5ec; --warn:#92620a; --warn-bg:#fdf1d9;
+      --info:#1f3b5b; --info-bg:#e6ecf5; --bad:#9a2020; --bad-bg:#fbe8e8;
       --gray:#4b5563; --gray-bg:#eceef1;
+      --radius:12px; --radius-lg:16px;
+      --shadow-sm:0 1px 2px rgba(16,24,40,.04), 0 1px 3px rgba(16,24,40,.06);
+      --shadow-md:0 6px 20px rgba(16,24,40,.08);
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg) url('/static/img/pattern-legal.svg') repeat;color:var(--ink);
-      font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;}
+      font:14px/1.6 "Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      -webkit-font-smoothing:antialiased}
     a{color:var(--navy)}
-    .masthead{position:relative;height:84px;overflow:hidden;flex:0 0 auto}
-    .masthead img{width:100%;height:100%;object-fit:cover;object-position:50% 38%;display:block}
+    .masthead{position:relative;height:96px;overflow:hidden;flex:0 0 auto}
+    .masthead img{width:100%;height:100%;object-fit:cover;object-position:50% 38%;display:block;filter:saturate(1.03)}
     .masthead .overlay{position:absolute;inset:0;
-      background:linear-gradient(90deg,rgba(31,59,91,.92),rgba(31,59,91,.62) 55%,rgba(31,59,91,.25));
-      display:flex;align-items:center;padding:0 20px}
-    .masthead .overlay strong{color:#fff;font-size:17px;letter-spacing:.02em}
-    .masthead .overlay span{color:#cfd9e6;font-size:11px;display:block}
+      background:linear-gradient(90deg,rgba(21,42,65,.94),rgba(31,59,91,.68) 55%,rgba(31,59,91,.3));
+      display:flex;align-items:center;padding:0 24px}
+    .masthead .overlay strong{color:#fff;font-size:18px;font-weight:700;letter-spacing:.01em}
+    .masthead .overlay span{color:#cfd9e6;font-size:11.5px;display:block;margin-top:2px;letter-spacing:.02em}
     .page{display:flex;flex-direction:column;min-height:100vh}
     .shell{display:flex;align-items:stretch;flex:1 1 auto}
-    .sidebar{flex:0 0 210px;width:210px;background:var(--card);border-right:1px solid var(--line);
-      padding:14px 10px;display:flex;flex-direction:column;gap:2px;overflow:hidden;white-space:nowrap}
-    .sidebar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;padding:0 2px}
-    .sidebar-head .brand{font-weight:700;font-size:14px}
-    .sidebar-toggle,.sidebar-reopen{background:none;border:1px solid var(--line);border-radius:6px;
-      cursor:pointer;font-size:14px;padding:4px 8px;line-height:1;color:var(--ink)}
-    .sidebar nav{display:flex;flex-direction:column;gap:2px}
-    .sidebar nav a{display:flex;align-items:center;gap:6px;padding:8px 10px;border-radius:7px;
-      color:var(--ink);text-decoration:none;font-size:13px}
-    .sidebar nav a:hover{background:var(--bg)}
-    .sidebar nav a.active{background:var(--info-bg);color:var(--navy);font-weight:600}
-    .sidebar nav a .n{margin-left:auto;background:var(--bad-bg);color:var(--bad);border-radius:999px;
-      font-size:11px;padding:1px 6px}
-    .sidebar-reopen{position:fixed;left:10px;top:96px;z-index:5;display:none}
+    .sidebar{flex:0 0 218px;width:218px;background:var(--card);border-right:1px solid var(--line);
+      padding:16px 12px;display:flex;flex-direction:column;gap:2px;overflow:hidden;white-space:nowrap;
+      transition:flex-basis .16s ease,width .16s ease,padding .16s ease}
+    .sidebar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding:0 4px}
+    .sidebar-head .brand{font-weight:800;font-size:14.5px;letter-spacing:.01em;color:var(--navy-dark)}
+    .sidebar-toggle,.sidebar-reopen{background:#fff;border:1px solid var(--line);border-radius:8px;
+      cursor:pointer;font-size:13px;padding:5px 9px;line-height:1;color:var(--ink);box-shadow:var(--shadow-sm)}
+    .sidebar-toggle:hover,.sidebar-reopen:hover{border-color:var(--navy)}
+    .sidebar nav{display:flex;flex-direction:column;gap:3px}
+    .sidebar nav a{display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:9px;
+      color:#3a3f47;text-decoration:none;font-size:13.5px;font-weight:500;transition:background .12s ease,color .12s ease}
+    .sidebar nav a svg{flex:0 0 auto;width:17px;height:17px;color:var(--muted);transition:color .12s ease}
+    .sidebar nav a:hover{background:var(--bg);color:var(--ink)}
+    .sidebar nav a.active{background:var(--info-bg);color:var(--navy-dark);font-weight:700}
+    .sidebar nav a.active svg{color:var(--navy)}
+    .sidebar nav a .n{margin-left:auto;background:var(--bad);color:#fff;border-radius:999px;
+      font-size:10.5px;font-weight:700;padding:1px 6px}
+    .sidebar-reopen{position:fixed;left:10px;top:108px;z-index:5;display:none}
     html.nav-collapsed .sidebar{flex-basis:0;width:0;padding-left:0;padding-right:0;border-right:0}
     html.nav-collapsed .sidebar-reopen{display:block}
-    .wrap{flex:1 1 auto;min-width:0;max-width:1200px;margin:0 auto;padding:20px}
-    h1{font-size:22px;margin:0 0 2px}
-    h2{font-size:16px;margin:22px 0 8px}
-    .sub{color:var(--muted);font-size:12px;margin-bottom:16px}
-    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin:14px 0}
-    .kpi{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
-    .kpi .n{font-size:20px;font-weight:700}
-    .kpi .l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-    form.filtros{background:var(--card);border:1px solid var(--line);border-radius:10px;
-      padding:12px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:8px}
-    form.filtros label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);gap:3px}
-    form.filtros select,form.filtros input{font:inherit;padding:5px 7px;border:1px solid var(--line);
-      border-radius:7px;background:#fff;min-width:130px}
-    .btn{font:inherit;padding:6px 14px;border:1px solid var(--navy);background:var(--navy);color:#fff;
-      border-radius:7px;cursor:pointer;text-decoration:none;display:inline-block}
+    .wrap{flex:1 1 auto;min-width:0;max-width:1200px;margin:0 auto;padding:24px}
+    h1{font-size:23px;margin:0 0 2px;font-weight:800;letter-spacing:-.01em;color:var(--navy-dark)}
+    h2{font-size:16px;margin:26px 0 10px;font-weight:700;color:var(--navy-dark)}
+    .sub{color:var(--muted);font-size:12.5px;margin-bottom:18px}
+    .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin:16px 0}
+    .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;box-shadow:var(--shadow-sm)}
+    .kpi .n{font-size:21px;font-weight:800;color:var(--navy-dark)}
+    .kpi .l{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+    form.filtros{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+      padding:14px;display:flex;flex-wrap:wrap;gap:10px;align-items:end;margin-bottom:10px;box-shadow:var(--shadow-sm)}
+    form.filtros label{display:flex;flex-direction:column;font-size:11px;color:var(--muted);gap:3px;font-weight:600}
+    form.filtros select,form.filtros input{font:inherit;padding:6px 8px;border:1px solid var(--line);
+      border-radius:8px;background:#fff;min-width:130px}
+    .btn{font:inherit;font-weight:600;padding:7px 15px;border:1px solid var(--navy);background:var(--navy);color:#fff;
+      border-radius:9px;cursor:pointer;text-decoration:none;display:inline-block;transition:background .12s ease,box-shadow .12s ease;
+      box-shadow:var(--shadow-sm)}
+    .btn:hover{background:var(--navy-dark)}
     .btn.ghost{background:#fff;color:var(--navy)}
-    .tabla-scroll{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:10px}
+    .btn.ghost:hover{background:var(--info-bg)}
+    .tabla-scroll{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm)}
     table{border-collapse:collapse;width:100%;font-size:13px}
-    th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
-    th{background:#fafbfc;font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+    th,td{text-align:left;padding:9px 11px;border-bottom:1px solid var(--line);white-space:nowrap}
+    th{background:#fafbfc;font-size:10.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:700}
     td.obj{white-space:normal;max-width:280px}
     tr:last-child td{border-bottom:0}
-    .badge{display:inline-block;padding:2px 8px;border-radius:999px;font-size:11px;font-weight:600}
+    tbody tr:hover td{background:#fafbfd}
+    .badge{display:inline-flex;align-items:center;gap:5px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:700}
+    .badge:before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;flex:0 0 auto}
     .l-A_regular{background:var(--info-bg);color:var(--navy)}
     .l-B_autogestionado{background:var(--ok-bg);color:var(--green)}
     .l-C_licitacion{background:var(--bad-bg);color:var(--maroon)}
@@ -77,9 +93,11 @@
     .s-cerrado{background:var(--gray-bg);color:var(--gray)}
     .s-en_tramite{background:var(--gray-bg);color:var(--gray)}
     .s-sin_vigencia{background:var(--warn-bg);color:var(--warn)}
-    .empty{background:var(--card);border:1px dashed var(--line);border-radius:10px;padding:24px;text-align:center;color:var(--muted)}
+    .empty{background:var(--card);border:1px dashed var(--line);border-radius:var(--radius-lg);padding:36px 24px;text-align:center;color:var(--muted)}
+    .empty:before{content:"";display:block;width:56px;height:56px;margin:0 auto 12px;opacity:.55;
+      background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64' fill='none' stroke='%236b7280' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 20h14l4 6h30v28H8z'/%3E%3Cpath d='M8 20l4-8h20l4 8'/%3E%3C/svg%3E") no-repeat center/contain}
     .grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:8px 20px;
-      background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;margin:10px 0}
+      background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin:10px 0;box-shadow:var(--shadow-sm)}
     .grid2 div span{display:block;font-size:11px;color:var(--muted);text-transform:uppercase}
     ol.tl{list-style:none;padding:0;margin:0}
     ol.tl li{border-left:2px solid var(--line);padding:0 0 14px 14px;position:relative}
@@ -88,8 +106,8 @@
     .muted{color:var(--muted)}
     .nav{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:10px 0 4px}
     .nav .rep{margin-left:auto;display:flex;gap:6px;align-items:center;background:var(--card);
-      border:1px solid var(--line);border-radius:10px;padding:6px 8px}
-    .nav .rep input,.nav .rep select{font:inherit;padding:4px 6px;border:1px solid var(--line);border-radius:6px}
+      border:1px solid var(--line);border-radius:var(--radius);padding:7px 9px;box-shadow:var(--shadow-sm)}
+    .nav .rep input,.nav .rep select{font:inherit;padding:5px 7px;border:1px solid var(--line);border-radius:7px}
     .n-critica{color:var(--bad);font-weight:700}
     .n-urgente{color:var(--bad)}
     .n-atencion{color:var(--warn)}
@@ -99,9 +117,9 @@
 <body>
   <div class="page">
   <header class="masthead">
-    <img src="/static/img/masthead-biblioteca.jpg" alt="">
+    <img src="{{ masthead_image or '/static/img/masthead-biblioteca.jpg' }}" alt="">
     <div class="overlay">
-      <div><strong>Sistema de Contratos y Licitaciones</strong><span>Gestión documental y jurídica</span></div>
+      <div><strong>{{ masthead_title or 'Sistema de Contratos y Licitaciones' }}</strong><span>{{ masthead_subtitle or 'Gestión documental y jurídica' }}</span></div>
     </div>
   </header>
   <div class="shell">
@@ -112,13 +130,34 @@
         <button type="button" class="sidebar-toggle" id="sidebar-toggle" title="Ocultar menú">&#10094;</button>
       </div>
       <nav>
-        <a href="/panel" class="{{ 'active' if request.url.path == '/panel' }}">Tablero</a>
-        <a href="/panel/contratos/nuevo" class="{{ 'active' if request.url.path == '/panel/contratos/nuevo' }}">+ Nueva solicitud</a>
-        <a href="/panel/licitaciones/nuevo" class="{{ 'active' if request.url.path == '/panel/licitaciones/nuevo' }}">+ Nueva licitación</a>
-        <a href="/panel/vigencias" class="{{ 'active' if request.url.path == '/panel/vigencias' }}">Gestión de vigencias</a>
-        <a href="/panel/catalogos" class="{{ 'active' if request.url.path == '/panel/catalogos' }}">Administración</a>
-        <a href="/panel/metricas" class="{{ 'active' if request.url.path == '/panel/metricas' }}">Métricas de proceso</a>
-        <a href="/panel/alertas" class="{{ 'active' if request.url.path == '/panel/alertas' }}">Alertas</a>
+        <a href="/panel" class="{{ 'active' if request.url.path == '/panel' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></svg>
+          Tablero
+        </a>
+        <a href="/panel/contratos/nuevo" class="{{ 'active' if request.url.path == '/panel/contratos/nuevo' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13 3v6h6"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
+          Nueva solicitud
+        </a>
+        <a href="/panel/licitaciones/nuevo" class="{{ 'active' if request.url.path == '/panel/licitaciones/nuevo' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 14a3 3 0 0 0 6 0Z"/><path d="M19 7 16 14a3 3 0 0 0 6 0Z"/></svg>
+          Nueva licitación
+        </a>
+        <a href="/panel/vigencias" class="{{ 'active' if request.url.path == '/panel/vigencias' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
+          Gestión de vigencias
+        </a>
+        <a href="/panel/catalogos" class="{{ 'active' if request.url.path == '/panel/catalogos' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3.2M12 18.3v3.2M4.4 4.4l2.3 2.3M17.3 17.3l2.3 2.3M2.5 12h3.2M18.3 12h3.2M4.4 19.6l2.3-2.3M17.3 6.7l2.3-2.3"/></svg>
+          Administración
+        </a>
+        <a href="/panel/metricas" class="{{ 'active' if request.url.path == '/panel/metricas' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="20" x2="4" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="20" y1="20" x2="20" y2="15"/></svg>
+          Métricas de proceso
+        </a>
+        <a href="/panel/alertas" class="{{ 'active' if request.url.path == '/panel/alertas' }}">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          Alertas
+        </a>
       </nav>
     </aside>
     <button type="button" class="sidebar-reopen" id="sidebar-reopen" title="Mostrar menú">&#9776;</button>

@@ -32,6 +32,7 @@ from app.enums import (
     Rol,
     TipoRenovacion,
     UnidadTipo,
+    icono_rol,
     nombre_linea,
 )
 from app.models.contrato import Contrato, Garantia, Hito, Multa
@@ -55,6 +56,7 @@ from app.state_machine import ErrorTransicion, MotorEstados
 from app.state_machine.transitions import transiciones_disponibles, transiciones_disponibles_licitacion
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
+templates.env.globals["icono_rol"] = icono_rol
 router = APIRouter(tags=["panel"])
 
 # Sólo estas dos líneas se crean directo como contrato; Flujo Completo (licitación)
@@ -245,6 +247,8 @@ def nuevo_contrato_form(request: Request, db: Session = Depends(get_db), error: 
             "categorias": list(CategoriaContrato),
             "monedas": list(Moneda),
             "error": error,
+            "masthead_image": "/static/img/masthead-firma.jpg",
+            "masthead_subtitle": "Ingreso y formalización de solicitudes",
             **_catalogos_basicos(db),
         },
         headers=SIN_CACHE,
@@ -574,7 +578,12 @@ def nueva_licitacion_form(request: Request, db: Session = Depends(get_db), error
     return templates.TemplateResponse(
         request=request,
         name="nueva_licitacion.html",
-        context={"usuario": usuario, "monedas": list(Moneda), "error": error, **_catalogos_basicos(db)},
+        context={
+            "usuario": usuario, "monedas": list(Moneda), "error": error,
+            "masthead_image": "/static/img/masthead-firma.jpg",
+            "masthead_subtitle": "Ingreso y formalización de solicitudes",
+            **_catalogos_basicos(db),
+        },
         headers=SIN_CACHE,
     )
 
@@ -767,6 +776,8 @@ def panel_catalogos(request: Request, db: Session = Depends(get_db), error: Opti
             "contraparte_tipos": list(ContraparteTipo),
             "roles": list(Rol),
             "monedas": list(Moneda),
+            "masthead_image": "/static/img/masthead-archivo.jpg",
+            "masthead_subtitle": "Catálogos y datos maestros",
             **_catalogos_basicos(db),
         },
         headers=SIN_CACHE,

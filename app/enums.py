@@ -25,6 +25,25 @@ class Rol(_StrEnum):
     admin_sistema = "admin_sistema"
 
 
+# Icono por rol para las tablas de usuarios y la línea de tiempo (ver base.html /
+# catalogos.html / detalle.html): un identificador visual rápido, no persistido.
+ICONOS_ROL: dict[str, str] = {
+    Rol.unidad_solicitante.value: "🗂️",
+    Rol.jefatura.value: "🧭",
+    Rol.legal.value: "⚖️",
+    Rol.admin_licitaciones.value: "📋",
+    Rol.financiera.value: "💰",
+    Rol.tecnica.value: "🛠️",
+    Rol.gerencia.value: "🏛️",
+    Rol.admin_contratos.value: "📁",
+    Rol.admin_sistema.value: "🛡️",
+}
+
+
+def icono_rol(valor: str) -> str:
+    return ICONOS_ROL.get(valor, "👤")
+
+
 class Moneda(_StrEnum):
     CLP = "CLP"
     UF = "UF"

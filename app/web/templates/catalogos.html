@@ -103,7 +103,7 @@
   <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th></tr></thead>
   <tbody>
   {% for u in usuarios %}
-  <tr><td>{{ u.nombre }}</td><td>{{ u.email }}</td><td>{{ u.rol.value }}</td></tr>
+  <tr><td>{{ u.nombre }}</td><td>{{ u.email }}</td><td>{{ icono_rol(u.rol.value) }} {{ u.rol.value }}</td></tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">No hay usuarios registrados todavía.</p>{% endif %}
