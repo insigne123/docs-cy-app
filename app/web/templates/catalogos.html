@@ -1,12 +1,13 @@
 {% extends "base.html" %}
-{% block title %}Catálogos · Panel de Contratos{% endblock %}
+{% block title %}Administración · Panel de Contratos{% endblock %}
 {% block body %}
 <p><a href="/panel">&larr; volver al panel</a></p>
-<h1>Catálogos</h1>
+<h1>Administración</h1>
 <div class="sub">
-  Datos maestros que alimentan los formularios del resto de los módulos (unidad
-  solicitante, contraparte). Si un desplegable de "Nueva solicitud" o "Nueva
-  licitación" aparece vacío, créalo primero aquí.
+  Catálogos y datos maestros que alimentan los desplegables del resto de los
+  módulos (unidad solicitante, contraparte, formato estándar, usuarios). Si un
+  desplegable de "Nueva solicitud" o "Nueva licitación" aparece vacío, créalo
+  primero aquí.
 </div>
 
 {% if ok %}<p class="s-vigente" style="display:inline-block;padding:4px 10px;border-radius:8px">{{ ok }}</p>{% endif %}
@@ -58,6 +59,68 @@
   <label>Contacto (email) <input type="email" name="contacto_email"></label>
   <label>Contacto (teléfono) <input type="text" name="contacto_telefono"></label>
   <div style="grid-column:1/-1"><button class="btn" type="submit">Crear contraparte</button></div>
+</form>
+</details>
+
+<h2>Formatos estándar <span class="muted">(Flujo Autogestionado)</span></h2>
+{% if formatos %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Nombre</th><th>Versión</th><th>Vigente</th><th>Aprobado por</th></tr></thead>
+  <tbody>
+  {% for f in formatos %}
+  <tr><td>{{ f.nombre }}</td><td>{{ f.version }}</td><td>{{ 'sí' if f.vigente else 'no' }}</td><td>{{ f.aprobado_por }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">No hay formatos registrados todavía — sin esto, el Flujo Autogestionado no se puede usar.</p>{% endif %}
+
+<details {{ 'open' if not formatos }} style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar formato</summary>
+<form method="post" action="/panel/catalogos/formatos" class="grid2" style="display:grid;margin-top:8px">
+  <label>Nombre <input type="text" name="nombre" required></label>
+  <label>Versión <input type="number" name="version" value="1" min="1"></label>
+  <label>Aprobado por <input type="text" name="aprobado_por" required placeholder="Fiscalía"></label>
+  <label>Fecha de aprobación <input type="date" name="fecha_aprobacion" required></label>
+  <label style="grid-column:1/-1">Campos variables <span class="muted">(separados por coma)</span>
+    <input type="text" name="campos_variables" style="width:100%" placeholder="contraparte, fecha">
+  </label>
+  <label>Ruta de la plantilla <input type="text" name="ruta_plantilla" required placeholder="formatos/nda_v1.docx"></label>
+  <label>Checksum base <input type="text" name="checksum_base" required></label>
+  <label style="flex-direction:row;align-items:center;gap:6px">
+    <input type="checkbox" name="vigente" value="1" checked> Vigente
+  </label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Crear formato</button></div>
+</form>
+</details>
+
+<h2>Usuarios</h2>
+{% if usuarios %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th></tr></thead>
+  <tbody>
+  {% for u in usuarios %}
+  <tr><td>{{ u.nombre }}</td><td>{{ u.email }}</td><td>{{ u.rol.value }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">No hay usuarios registrados todavía.</p>{% endif %}
+
+<details style="margin-top:8px">
+<summary class="muted" style="cursor:pointer">+ Agregar usuario</summary>
+<form method="post" action="/panel/catalogos/usuarios" class="grid2" style="display:grid;margin-top:8px">
+  <label>Nombre <input type="text" name="nombre" required></label>
+  <label>Email <input type="email" name="email" required></label>
+  <label>Rol
+    <select name="rol" required>{% for r in roles %}<option value="{{ r.value }}">{{ r.value }}</option>{% endfor %}</select>
+  </label>
+  <label>Unidad
+    <select name="unidad_id">
+      <option value="">— sin asignar —</option>
+      {% for u in unidades %}<option value="{{ u.id }}">{{ u.nombre }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>Contraseña inicial <span class="muted">(vacío = no podrá iniciar sesión todavía)</span>
+    <input type="password" name="password">
+  </label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Crear usuario</button></div>
 </form>
 </details>
 {% endblock %}

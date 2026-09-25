@@ -272,6 +272,56 @@ def test_crear_contraparte_desde_catalogos(api, session, usuarios):
     assert "Logística Andina Ltda." in r.text
 
 
+def test_crear_formato_desde_administracion(api, session, usuarios):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        "/panel/catalogos/formatos",
+        data={
+            "nombre": "NDA v2", "version": "2", "aprobado_por": "Fiscalia",
+            "fecha_aprobacion": "2026-01-01", "campos_variables": "contraparte, fecha",
+            "ruta_plantilla": "formatos/nda_v2.docx", "checksum_base": "abc999", "vigente": "1",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+
+    r = api.get("/panel/contratos/nuevo")
+    assert "NDA v2" in r.text
+
+
+def test_crear_usuario_desde_administracion(api, session, usuarios, unidad):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        "/panel/catalogos/usuarios",
+        data={
+            "nombre": "Nueva Persona", "email": "Nueva.Persona@Empresa.cl",
+            "rol": "legal", "unidad_id": str(unidad.id), "password": "clave12345",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+
+    from sqlalchemy import select
+    from app.models.core import Usuario
+    u = session.scalars(select(Usuario).where(Usuario.email == "nueva.persona@empresa.cl")).first()
+    assert u is not None and u.rol.value == "legal" and u.password_hash is not None
+
+    # El nuevo usuario ya puede iniciar sesión.
+    r2 = api.post("/login", data={"email": "nueva.persona@empresa.cl", "password": "clave12345"}, follow_redirects=False)
+    assert r2.status_code == 303 and r2.headers["location"] == "/panel"
+
+
+def test_crear_usuario_email_duplicado_muestra_error(api, session, usuarios):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    existente = usuarios[Rol.legal]
+    r = api.post(
+        "/panel/catalogos/usuarios",
+        data={"nombre": "Otro", "email": existente.email, "rol": "legal"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+
+
 def test_licitacion_activa_aparece_en_tablero(api, session, usuarios, unidad):
     _login(api, session, usuarios, rol=Rol.admin_licitaciones)
     r = api.post(

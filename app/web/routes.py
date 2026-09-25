@@ -29,6 +29,7 @@ from app.enums import (
     LineaContrato,
     Moneda,
     MultaEstado,
+    Rol,
     TipoRenovacion,
     UnidadTipo,
     nombre_linea,
@@ -37,7 +38,7 @@ from app.models.contrato import Contrato, Garantia, Hito, Multa
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
-from app.services.auth import crear_token, verify_password
+from app.services.auth import crear_token, hash_password, verify_password
 from app.services.consultas import ficha_contrato, ficha_licitacion
 from app.services.contratos import calcular_requiere_gerencia, crear_contrato, generar_codigo
 from app.services.dashboard import construir_dashboard, listar_vigentes_para_gestion, opciones_filtros, semaforo_de
@@ -749,9 +750,10 @@ def agregar_garantia_licitacion_submit(
 
 @router.get("/panel/catalogos", response_class=HTMLResponse, include_in_schema=False)
 def panel_catalogos(request: Request, db: Session = Depends(get_db), error: Optional[str] = None, ok: Optional[str] = None):
-    """Alta de los datos maestros que alimentan los desplegables del resto de los
-    módulos (unidad solicitante, contraparte). Antes solo se podían crear por /docs
-    (Swagger); esta es la vía normal para un usuario que no es desarrollador."""
+    """Módulo de Administración: alta de los datos maestros que alimentan los
+    desplegables del resto de los módulos (unidad solicitante, contraparte,
+    formato estándar, usuarios). Antes solo se podían crear por /docs (Swagger);
+    esta es la vía normal para un usuario que no es desarrollador."""
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
@@ -762,6 +764,8 @@ def panel_catalogos(request: Request, db: Session = Depends(get_db), error: Opti
             "usuario": usuario, "error": error, "ok": ok,
             "unidad_tipos": list(UnidadTipo),
             "contraparte_tipos": list(ContraparteTipo),
+            "roles": list(Rol),
+            "monedas": list(Moneda),
             **_catalogos_basicos(db),
         },
         headers=SIN_CACHE,
@@ -812,6 +816,64 @@ def crear_contraparte_submit(
         db.rollback()
         return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo crear la contraparte: ' + str(exc))}", status_code=303)
     return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Contraparte creada')}", status_code=303)
+
+
+@router.post("/panel/catalogos/formatos", include_in_schema=False)
+def crear_formato_submit(
+    request: Request,
+    db: Session = Depends(get_db),
+    nombre: str = Form(...),
+    version: str = Form("1"),
+    aprobado_por: str = Form(...),
+    fecha_aprobacion: str = Form(...),
+    campos_variables: Optional[str] = Form(None),
+    ruta_plantilla: str = Form(...),
+    checksum_base: str = Form(...),
+    vigente: Optional[str] = Form(None),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    try:
+        db.add(FormatoEstandar(
+            nombre=nombre.strip(), version=int(version or 1), vigente=bool(vigente),
+            aprobado_por=aprobado_por.strip(), fecha_aprobacion=date.fromisoformat(fecha_aprobacion),
+            campos_variables=[c.strip() for c in (campos_variables or "").split(",") if c.strip()],
+            ruta_plantilla=ruta_plantilla.strip(), checksum_base=checksum_base.strip(),
+        ))
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo crear el formato: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Formato creado')}", status_code=303)
+
+
+@router.post("/panel/catalogos/usuarios", include_in_schema=False)
+def crear_usuario_submit(
+    request: Request,
+    db: Session = Depends(get_db),
+    nombre: str = Form(...),
+    email: str = Form(...),
+    rol: str = Form(...),
+    unidad_id: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+):
+    _, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    try:
+        nuevo = Usuario(
+            nombre=nombre.strip(), email=email.strip().lower(), rol=Rol(rol),
+            unidad_id=int(unidad_id) if unidad_id else None, activo=True,
+        )
+        if password:
+            nuevo.password_hash = hash_password(password)
+        db.add(nuevo)
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo crear el usuario: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Usuario creado')}", status_code=303)
 
 
 @router.get("/panel/reporte", include_in_schema=False)
