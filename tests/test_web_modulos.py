@@ -551,6 +551,52 @@ def test_editar_y_eliminar_usuario(api, session, usuarios):
     assert admin.activo is True
 
 
+def test_navegacion_unidad_solicitante_solo_solicitudes_y_licitaciones(api, session, usuarios):
+    """Unidad Solicitante: acceso solo a Nueva solicitud y Nueva licitación."""
+    _login(api, session, usuarios, rol=Rol.unidad_solicitante)
+
+    r = api.get("/panel/contratos/nuevo")
+    assert r.status_code == 200
+    r = api.get("/panel/licitaciones/nuevo")
+    assert r.status_code == 200
+
+    for ruta in ("/panel", "/panel/contratos", "/panel/vigencias", "/panel/metricas", "/panel/alertas"):
+        r = api.get(ruta, follow_redirects=False)
+        assert r.status_code == 303 and "error=" in r.headers["location"], ruta
+
+    # El login sin 'siguiente' aterriza en un módulo que sí puede ver, no en /panel.
+    r = api.post("/login", data={"email": usuarios[Rol.unidad_solicitante].email, "password": "clave12345"}, follow_redirects=False)
+    assert r.status_code == 303 and r.headers["location"] == "/panel/contratos/nuevo"
+
+
+def test_navegacion_jefatura_incluye_vigencias(api, session, usuarios):
+    """Jefatura: Nueva solicitud, Nueva licitación y Gestión de vigencias — nada más."""
+    _login(api, session, usuarios, rol=Rol.jefatura)
+
+    for ruta in ("/panel/contratos/nuevo", "/panel/licitaciones/nuevo", "/panel/vigencias"):
+        r = api.get(ruta)
+        assert r.status_code == 200, ruta
+
+    for ruta in ("/panel", "/panel/contratos", "/panel/metricas", "/panel/alertas"):
+        r = api.get(ruta, follow_redirects=False)
+        assert r.status_code == 303 and "error=" in r.headers["location"], ruta
+
+
+def test_navegacion_legal_todo_menos_administracion(api, session, usuarios):
+    """Legal: acceso a todos los módulos salvo Administración."""
+    _login(api, session, usuarios, rol=Rol.legal)
+
+    for ruta in (
+        "/panel", "/panel/contratos", "/panel/contratos/nuevo", "/panel/licitaciones/nuevo",
+        "/panel/vigencias", "/panel/metricas", "/panel/alertas",
+    ):
+        r = api.get(ruta)
+        assert r.status_code == 200, ruta
+
+    r = api.get("/panel/catalogos", follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+
+
 def test_administracion_solo_para_admin_sistema(api, session, usuarios):
     """El modulo Administracion completo (catalogos y parametros del sistema) es
     exclusivo de admin_sistema — cualquier otro rol, aunque este autenticado, no

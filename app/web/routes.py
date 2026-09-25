@@ -173,6 +173,40 @@ def _requiere_rol(usuario, redirect_url: str, *roles: Rol) -> Optional[RedirectR
     return RedirectResponse(url=f"{redirect_url}?error={_msg(mensaje)}", status_code=303, headers=SIN_CACHE)
 
 
+# Restricción de navegación por rol: qué páginas de nivel superior puede alcanzar
+# cada rol (independiente de _requiere_rol, que decide quién puede EJECUTAR cada
+# acción dentro de una página). Un rol ausente de estos conjuntos no tiene
+# restricción de navegación adicional.
+_SIN_TABLERO_NI_LISTADO = frozenset({Rol.unidad_solicitante.value, Rol.jefatura.value})
+_SIN_METRICAS_NI_ALERTAS = frozenset({Rol.unidad_solicitante.value, Rol.jefatura.value})
+_SIN_VIGENCIAS = frozenset({Rol.unidad_solicitante.value})
+# Además de quien ya podía VER cada formulario de creación (unidad_solicitante en
+# Nueva solicitud, admin_licitaciones en Nueva licitación): estos roles también
+# pueden entrar a mirarlo, aunque el envío (POST) lo siga limitando _requiere_rol
+# a quien realmente ejecuta esa responsabilidad según la documentación.
+_VE_NUEVA_SOLICITUD_ADEMAS = frozenset({Rol.jefatura.value, Rol.legal.value})
+_VE_NUEVA_LICITACION_ADEMAS = frozenset({Rol.unidad_solicitante.value, Rol.jefatura.value, Rol.legal.value})
+
+
+def _bloquear_modulo(usuario, roles_bloqueados: frozenset, destino: str, etiqueta: str) -> Optional[RedirectResponse]:
+    """Para páginas de solo lectura (Tablero, Listado, Vigencias, Métricas,
+    Alertas): a diferencia de _requiere_rol, aquí se listan los roles SIN acceso
+    al módulo completo, no los que sí. `usuario` puede ser None (sesión anónima
+    con AUTH_REQUIRED apagado): en ese caso no se restringe nada."""
+    if usuario is None or usuario.rol.value not in roles_bloqueados:
+        return None
+    mensaje = f"Tu rol ({usuario.rol.value}) no tiene acceso a {etiqueta}"
+    return RedirectResponse(url=f"{destino}?error={_msg(mensaje)}", status_code=303, headers=SIN_CACHE)
+
+
+def _pagina_inicio(usuario) -> str:
+    """A dónde mandar a cada rol después de iniciar sesión (o al pedir /panel si su
+    rol no tiene Tablero): la primera página de su propio menú."""
+    if usuario is not None and usuario.rol.value in _SIN_TABLERO_NI_LISTADO:
+        return "/panel/contratos/nuevo"
+    return "/panel"
+
+
 def _decimal_o_none(v: Optional[str]) -> Optional[Decimal]:
     if not v:
         return None
@@ -198,6 +232,8 @@ def panel(
 ):
     if (r := _requiere_login(request, db)) is not None:
         return r
+    if (r := _bloquear_modulo(request.state.usuario, _SIN_TABLERO_NI_LISTADO, "/panel/contratos/nuevo", "el Tablero")) is not None:
+        return r
     datos = construir_dashboard(db, **filtros)
     return templates.TemplateResponse(
         request=request,
@@ -221,6 +257,8 @@ def panel_listado_contratos(request: Request, filtros: dict = Depends(filtros_pa
     mes, y de Vigencias, que solo muestra los que están 'vigente'."""
     if (r := _requiere_login(request, db)) is not None:
         return r
+    if (r := _bloquear_modulo(request.state.usuario, _SIN_TABLERO_NI_LISTADO, "/panel/contratos/nuevo", "el Listado de contratos")) is not None:
+        return r
     return templates.TemplateResponse(
         request=request,
         name="contratos_listado.html",
@@ -238,6 +276,8 @@ def panel_vigencias(request: Request, db: Session = Depends(get_db)):
     """Módulo de Gestión de Vigencias: contratos vigentes ordenados por urgencia,
     con acciones directas de renovar / terminar (ver services/dashboard.py)."""
     if (r := _requiere_login(request, db)) is not None:
+        return r
+    if (r := _bloquear_modulo(request.state.usuario, _SIN_VIGENCIAS, "/panel/contratos/nuevo", "Gestión de vigencias")) is not None:
         return r
     return templates.TemplateResponse(
         request=request,
@@ -260,6 +300,8 @@ def panel_json(
 def panel_alertas(request: Request, db: Session = Depends(get_db)):
     if (r := _requiere_login(request, db)) is not None:
         return r
+    if (r := _bloquear_modulo(request.state.usuario, _SIN_METRICAS_NI_ALERTAS, "/panel/contratos/nuevo", "Alertas")) is not None:
+        return r
     return templates.TemplateResponse(
         request=request,
         name="alertas.html",
@@ -271,6 +313,8 @@ def panel_alertas(request: Request, db: Session = Depends(get_db)):
 @router.get("/panel/metricas", response_class=HTMLResponse, include_in_schema=False)
 def panel_metricas(request: Request, db: Session = Depends(get_db)):
     if (r := _requiere_login(request, db)) is not None:
+        return r
+    if (r := _bloquear_modulo(request.state.usuario, _SIN_METRICAS_NI_ALERTAS, "/panel/contratos/nuevo", "Métricas de proceso")) is not None:
         return r
     return templates.TemplateResponse(
         request=request, name="metricas.html", context={"m": metricas_proceso(db)},
@@ -308,7 +352,10 @@ def nuevo_contrato_form(request: Request, db: Session = Depends(get_db), error: 
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
-    if (r := _requiere_rol(usuario, "/panel", Rol.unidad_solicitante)) is not None:
+    # Ver el formulario está permitido a un conjunto más amplio de roles que
+    # enviarlo (ver _VE_NUEVA_SOLICITUD_ADEMAS): Jefatura y Legal pueden revisarlo,
+    # pero solo Unidad Solicitante lo envía (_requiere_rol en el POST).
+    if (r := _requiere_rol(usuario, "/panel", Rol.unidad_solicitante, *[Rol(v) for v in _VE_NUEVA_SOLICITUD_ADEMAS])) is not None:
         return r
     return templates.TemplateResponse(
         request=request,
@@ -662,7 +709,9 @@ def nueva_licitacion_form(request: Request, db: Session = Depends(get_db), error
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
-    if (r := _requiere_rol(usuario, "/panel", Rol.admin_licitaciones)) is not None:
+    # Igual que en Nueva solicitud: ver el formulario está permitido a más roles
+    # que enviarlo — solo Admin Licitaciones lo envía (_requiere_rol en el POST).
+    if (r := _requiere_rol(usuario, "/panel", Rol.admin_licitaciones, *[Rol(v) for v in _VE_NUEVA_LICITACION_ADEMAS])) is not None:
         return r
     return templates.TemplateResponse(
         request=request,
@@ -1212,13 +1261,17 @@ def login_submit(
     siguiente: Optional[str] = Form(None),
     db: Session = Depends(get_db),
 ):
-    destino = siguiente if siguiente and siguiente.startswith("/") else "/panel"
+    destino = siguiente if siguiente and siguiente.startswith("/") else None
     email = email.strip().lower()
     usuario = db.scalars(select(Usuario).where(Usuario.email == email)).first()
     if usuario is None or not verify_password(password, usuario.password_hash):
-        return RedirectResponse(url=f"/login?error=1&siguiente={quote(destino, safe='')}", status_code=303)
+        return RedirectResponse(url=f"/login?error=1&siguiente={quote(destino or '/panel', safe='')}", status_code=303)
     if not usuario.activo:
-        return RedirectResponse(url=f"/login?error=inactivo&siguiente={quote(destino, safe='')}", status_code=303)
+        return RedirectResponse(url=f"/login?error=inactivo&siguiente={quote(destino or '/panel', safe='')}", status_code=303)
+    # Sin 'siguiente' explícito (login normal, no un redirect-back tras un 303): la
+    # página de aterrizaje depende del rol, porque Unidad Solicitante y Jefatura no
+    # tienen acceso al Tablero (ver _bloquear_modulo).
+    destino = destino or _pagina_inicio(usuario)
     resp = RedirectResponse(url=destino, status_code=303, headers=SIN_CACHE)
     resp.set_cookie(
         COOKIE_SESION,
