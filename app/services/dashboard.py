@@ -32,6 +32,10 @@ MESES_ES = {
 }
 
 _TERMINALES = frozenset(e.value for e in ESTADOS_CONTRATO_TERMINALES)
+# "Finalizado" para efectos del indicador por línea: el contrato ya completó su
+# tramitación (llegó a vigente, o cerró como terminado/descartado). Lo demás
+# todavía está en curso camino a la integración.
+_FINALIZADOS_LINEA = _TERMINALES | {EstadoContrato.vigente.value}
 
 
 def _umbrales(session: Session) -> list[int]:
@@ -132,6 +136,8 @@ def construir_dashboard(
     nombres_us = {u.id: u.nombre for u in session.scalars(select(Usuario))}
 
     ind_linea: dict[str, int] = {}
+    ind_linea_finalizados: dict[str, int] = {}
+    ind_linea_en_curso: dict[str, int] = {}
     ind_estado: dict[str, int] = {}
     monto_total: dict[str, Decimal] = {}
     vigentes = por_vencer = vencidos = en_renovacion = 0
@@ -146,6 +152,10 @@ def construir_dashboard(
 
         semaforo, nivel, dias = _semaforo(c, hoy, umbrales)
         ind_linea[c.linea.value] = ind_linea.get(c.linea.value, 0) + 1
+        if c.estado.value in _FINALIZADOS_LINEA:
+            ind_linea_finalizados[c.linea.value] = ind_linea_finalizados.get(c.linea.value, 0) + 1
+        else:
+            ind_linea_en_curso[c.linea.value] = ind_linea_en_curso.get(c.linea.value, 0) + 1
         ind_estado[c.estado.value] = ind_estado.get(c.estado.value, 0) + 1
         _acumular_monto(monto_total, c)
         if semaforo == "vigente":
@@ -220,6 +230,8 @@ def construir_dashboard(
         "indicadores": {
             "total": total,
             "por_linea": ind_linea,
+            "por_linea_finalizados": ind_linea_finalizados,
+            "por_linea_en_curso": ind_linea_en_curso,
             "por_estado": ind_estado,
             "vigentes": vigentes,
             "por_vencer": por_vencer,

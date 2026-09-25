@@ -52,6 +52,7 @@ from app.services.dashboard import (
 from app.services.formatos import sha256_bytes
 from app.services.licitaciones import (
     adjudicar_licitacion,
+    contar_resumen as contar_resumen_licitaciones,
     crear_licitacion,
     generar_codigo_licitacion,
     listar_activas as listar_licitaciones_activas,
@@ -244,6 +245,7 @@ def panel(
             "filtros": filtros,
             "alertas": resumen_alertas(db),
             "licitaciones_activas": listar_licitaciones_activas(db)[:8],
+            "licitaciones_conteo": contar_resumen_licitaciones(db),
             "error": error,
         },
         headers=SIN_CACHE,

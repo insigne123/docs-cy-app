@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.enums import (
@@ -33,6 +33,20 @@ def listar_activas(session: Session) -> list[Licitacion]:
             .order_by(Licitacion.fecha_ingreso.desc())
         )
     )
+
+
+def contar_resumen(session: Session) -> dict[str, int]:
+    """Total de licitaciones creadas y su desglose en curso (Fase I, sin
+    resultado aún) vs. finalizadas (adjudicada, no adjudicada, desierta o
+    desistida) — para el indicador 'Licitaciones' del tablero."""
+    total = session.scalar(select(func.count(Licitacion.id))) or 0
+    en_curso = (
+        session.scalar(
+            select(func.count(Licitacion.id)).where(Licitacion.resultado == LicitacionResultado.en_proceso)
+        )
+        or 0
+    )
+    return {"total": total, "en_curso": en_curso, "finalizadas": total - en_curso}
 
 
 def generar_codigo_licitacion(session: Session) -> str:
