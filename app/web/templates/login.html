@@ -1,10 +1,14 @@
 {% extends "base.html" %}
 {% block title %}Ingreso · Panel de Contratos{% endblock %}
 {% block body %}
-<h1>Ingreso</h1>
-{% if error == 'inactivo' %}<p class="n-critica">Usuario inactivo. Contacta al administrador.</p>
-{% elif error %}<p class="n-critica">Credenciales inválidas.</p>{% endif %}
-<form method="post" action="/login" class="filtros" style="max-width:340px;flex-direction:column;align-items:stretch">
+<div class="login-hero">
+  <img src="/static/img/logo-grupoexpro.png" alt="Grupo Expro">
+  <h1>Sistema de Gestión de Contratos</h1>
+  <div class="sub">Grupo Expro · Contratos y Licitaciones</div>
+</div>
+{% if error == 'inactivo' %}<p class="n-critica" style="text-align:center">Usuario inactivo. Contacta al administrador.</p>
+{% elif error %}<p class="n-critica" style="text-align:center">Credenciales inválidas.</p>{% endif %}
+<form method="post" action="/login" class="filtros login-form" style="flex-direction:column;align-items:stretch">
   {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}
   <label>Email <input type="email" name="email" required></label>
   <label>Contraseña <input type="password" name="password" required></label>
