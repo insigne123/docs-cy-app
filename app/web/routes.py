@@ -63,15 +63,11 @@ from app.state_machine.transitions import transiciones_disponibles, transiciones
 
 def _usuario_sesion(request: Request):
     """Global de Jinja: usuario de la sesión actual (o None), para mostrar su
-    nombre y el botón de cerrar sesión en el menú lateral en toda página, sin
-    tener que pasar 'usuario' por el contexto de cada ruta."""
-    from app.database import SessionLocal
-
-    db = SessionLocal()
-    try:
-        return usuario_actual(request, db)
-    finally:
-        db.close()
+    nombre y el botón de cerrar sesión en el menú lateral en toda página.
+    Lee request.state.usuario, ya resuelto por _requiere_login()/_usuario_o_redirect()
+    con la sesión de BD de la propia request — nunca abre una conexión aparte
+    (eso rompería dependency_overrides en las pruebas, que usan otra base)."""
+    return getattr(request.state, "usuario", None)
 
 
 templates = Jinja2Templates(directory=str(Path(__file__).parent / "templates"))
@@ -143,7 +139,12 @@ SIN_CACHE = {"Cache-Control": "private, no-store"}
 
 
 def _requiere_login(request: Request, db: Session) -> Optional[RedirectResponse]:
-    if settings.auth_required and usuario_actual(request, db) is None:
+    # Siempre resuelve el usuario (con la sesión de BD ya inyectada de esta request,
+    # respetando dependency_overrides en pruebas) y lo deja en request.state para que
+    # el sidebar (usuario_sesion(), en base.html) lo muestre sin abrir otra sesión.
+    usuario = usuario_actual(request, db)
+    request.state.usuario = usuario
+    if settings.auth_required and usuario is None:
         return RedirectResponse(url="/login", status_code=303, headers=SIN_CACHE)
     return None
 
@@ -153,6 +154,7 @@ def _usuario_o_redirect(request: Request, db: Session):
     AUTH_REQUIRED esté apagado — se necesita saber quién hizo el cambio para la
     trazabilidad. Devuelve (usuario, None) o (None, redirect)."""
     usuario = usuario_actual(request, db)
+    request.state.usuario = usuario
     if usuario is None:
         siguiente = quote(request.url.path, safe="")
         return None, RedirectResponse(url=f"/login?siguiente={siguiente}", status_code=303, headers=SIN_CACHE)
