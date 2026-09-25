@@ -279,14 +279,21 @@ def test_crear_formato_desde_administracion(api, session, usuarios):
         data={
             "nombre": "NDA v2", "version": "2", "aprobado_por": "Fiscalia",
             "fecha_aprobacion": "2026-01-01", "campos_variables": "contraparte, fecha",
-            "ruta_plantilla": "formatos/nda_v2.docx", "checksum_base": "abc999", "vigente": "1",
+            "ruta_plantilla": "formatos/nda_v2.docx", "vigente": "1",
         },
+        files={"plantilla_archivo": ("nda_v2.docx", b"contenido de prueba del formato", "application/octet-stream")},
         follow_redirects=False,
     )
     assert r.status_code == 303 and "ok=" in r.headers["location"]
 
     r = api.get("/panel/contratos/nuevo")
     assert "NDA v2" in r.text
+
+    from hashlib import sha256
+    from sqlalchemy import select
+    from app.models.core import FormatoEstandar
+    formato = session.scalars(select(FormatoEstandar).where(FormatoEstandar.nombre == "NDA v2")).first()
+    assert formato.checksum_base == sha256(b"contenido de prueba del formato").hexdigest()
 
 
 def test_crear_usuario_desde_administracion(api, session, usuarios, unidad):

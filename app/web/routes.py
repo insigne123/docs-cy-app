@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Query, Request, Response
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, Response, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import select
@@ -42,6 +42,7 @@ from app.services.auth import crear_token, hash_password, verify_password
 from app.services.consultas import ficha_contrato, ficha_licitacion
 from app.services.contratos import calcular_requiere_gerencia, crear_contrato, generar_codigo
 from app.services.dashboard import construir_dashboard, listar_vigentes_para_gestion, opciones_filtros, semaforo_de
+from app.services.formatos import sha256_bytes
 from app.services.licitaciones import (
     adjudicar_licitacion,
     crear_licitacion,
@@ -819,7 +820,7 @@ def crear_contraparte_submit(
 
 
 @router.post("/panel/catalogos/formatos", include_in_schema=False)
-def crear_formato_submit(
+async def crear_formato_submit(
     request: Request,
     db: Session = Depends(get_db),
     nombre: str = Form(...),
@@ -828,18 +829,21 @@ def crear_formato_submit(
     fecha_aprobacion: str = Form(...),
     campos_variables: Optional[str] = Form(None),
     ruta_plantilla: str = Form(...),
-    checksum_base: str = Form(...),
+    plantilla_archivo: UploadFile = File(...),
     vigente: Optional[str] = Form(None),
 ):
     _, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
+    contenido = await plantilla_archivo.read()
+    if not contenido:
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('El archivo de la plantilla está vacío')}", status_code=303)
     try:
         db.add(FormatoEstandar(
             nombre=nombre.strip(), version=int(version or 1), vigente=bool(vigente),
             aprobado_por=aprobado_por.strip(), fecha_aprobacion=date.fromisoformat(fecha_aprobacion),
             campos_variables=[c.strip() for c in (campos_variables or "").split(",") if c.strip()],
-            ruta_plantilla=ruta_plantilla.strip(), checksum_base=checksum_base.strip(),
+            ruta_plantilla=ruta_plantilla.strip(), checksum_base=sha256_bytes(contenido),
         ))
         db.commit()
     except (ValueError, IntegrityError) as exc:

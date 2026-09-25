@@ -75,7 +75,7 @@
 
 <details {{ 'open' if not formatos }} style="margin-top:8px">
 <summary class="muted" style="cursor:pointer">+ Agregar formato</summary>
-<form method="post" action="/panel/catalogos/formatos" class="grid2" style="display:grid;margin-top:8px">
+<form method="post" action="/panel/catalogos/formatos" enctype="multipart/form-data" class="grid2" style="display:grid;margin-top:8px">
   <label>Nombre <input type="text" name="nombre" required></label>
   <label>Versión <input type="number" name="version" value="1" min="1"></label>
   <label>Aprobado por <input type="text" name="aprobado_por" required placeholder="Fiscalía"></label>
@@ -83,8 +83,13 @@
   <label style="grid-column:1/-1">Campos variables <span class="muted">(separados por coma)</span>
     <input type="text" name="campos_variables" style="width:100%" placeholder="contraparte, fecha">
   </label>
-  <label>Ruta de la plantilla <input type="text" name="ruta_plantilla" required placeholder="formatos/nda_v1.docx"></label>
-  <label>Checksum base <input type="text" name="checksum_base" required></label>
+  <label style="grid-column:1/-1">Archivo de la plantilla aprobada (.docx)
+    <span class="muted">— el sistema calcula su huella (checksum) automáticamente; más adelante sirve para detectar si el clausulado fue modificado</span>
+    <input type="file" name="plantilla_archivo" accept=".docx,.doc,.pdf" required style="width:100%">
+  </label>
+  <label>Ruta de referencia <span class="muted">(dónde vive el archivo, ej. la carpeta compartida)</span>
+    <input type="text" name="ruta_plantilla" required placeholder="formatos/nda_v1.docx">
+  </label>
   <label style="flex-direction:row;align-items:center;gap:6px">
     <input type="checkbox" name="vigente" value="1" checked> Vigente
   </label>
