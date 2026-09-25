@@ -447,6 +447,32 @@ def test_admin_sistema_puede_todo(api, session, usuarios, unidad, contraparte):
     assert r.status_code == 303 and "ok=" in r.headers["location"]
 
 
+def test_administracion_solo_para_admin_sistema(api, session, usuarios):
+    """El modulo Administracion completo (catalogos y parametros del sistema) es
+    exclusivo de admin_sistema — cualquier otro rol, aunque este autenticado, no
+    puede ni ver la pagina ni ejecutar sus acciones."""
+    _login(api, session, usuarios, rol=Rol.legal)
+    r = api.get("/panel/catalogos", follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers["location"] and r.headers["location"].startswith("/panel?")
+
+    r = api.post(
+        "/panel/catalogos/unidades", data={"nombre": "Compras", "tipo": "interna"}, follow_redirects=False,
+    )
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+
+    r = api.post(
+        "/panel/catalogos/contrapartes",
+        data={"razon_social": "Intrusa SpA", "tipo": "proveedor"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+
+    from sqlalchemy import select
+    from app.models.core import Contraparte, Unidad
+    assert session.scalars(select(Unidad).where(Unidad.nombre == "Compras")).first() is None
+    assert session.scalars(select(Contraparte).where(Contraparte.razon_social == "Intrusa SpA")).first() is None
+
+
 def test_licitacion_activa_aparece_en_tablero(api, session, usuarios, unidad):
     _login(api, session, usuarios, rol=Rol.admin_licitaciones)
     r = api.post(

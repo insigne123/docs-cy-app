@@ -846,6 +846,8 @@ def panel_catalogos(request: Request, db: Session = Depends(get_db), error: Opti
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
+    if (r := _requiere_rol(usuario, "/panel", Rol.admin_sistema)) is not None:
+        return r
     return templates.TemplateResponse(
         request=request,
         name="catalogos.html",
@@ -898,10 +900,7 @@ def crear_contraparte_submit(
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
-    if (r := _requiere_rol(
-        usuario, "/panel/catalogos",
-        Rol.unidad_solicitante, Rol.admin_licitaciones, Rol.legal, Rol.admin_contratos,
-    )) is not None:
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
         return r
     try:
         db.add(Contraparte(
@@ -932,7 +931,7 @@ async def crear_formato_submit(
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
-    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.legal)) is not None:
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
         return r
     contenido = await plantilla_archivo.read()
     if not contenido:
