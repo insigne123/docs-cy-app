@@ -16,10 +16,35 @@
 <h2>Unidades solicitantes</h2>
 {% if unidades %}
 <div class="tabla-scroll"><table>
-  <thead><tr><th>Nombre</th><th>Tipo</th></tr></thead>
+  <thead><tr><th>Nombre</th><th>Tipo</th><th>Activa</th><th style="text-align:right">Acciones</th></tr></thead>
   <tbody>
   {% for u in unidades %}
-  <tr><td>{{ u.nombre }}</td><td>{{ u.tipo.value }}</td></tr>
+  <tr>
+    <td>{{ u.nombre }}</td>
+    <td>{{ u.tipo.value }}</td>
+    <td><span class="badge {{ 's-vigente' if u.activo else 's-cerrado' }}">{{ 'activa' if u.activo else 'inactiva' }}</span></td>
+    <td>
+      <div style="display:flex;gap:6px;justify-content:flex-end">
+        <details>
+          <summary class="btn ghost" style="display:inline-block;font-size:12px;padding:4px 10px;cursor:pointer">Editar</summary>
+          <form method="post" action="/panel/catalogos/unidades/{{ u.id }}/editar" class="grid2" style="display:grid;margin-top:8px;text-align:left">
+            <label>Nombre <input type="text" name="nombre" value="{{ u.nombre }}" required></label>
+            <label>Tipo
+              <select name="tipo" required>{% for t in unidad_tipos %}<option value="{{ t.value }}" {{ 'selected' if t.value==u.tipo.value }}>{{ t.value }}</option>{% endfor %}</select>
+            </label>
+            <label style="flex-direction:row;align-items:center;gap:6px">
+              <input type="checkbox" name="activo" value="1" {{ 'checked' if u.activo }}> Activa
+            </label>
+            <div style="grid-column:1/-1"><button class="btn" type="submit">Guardar cambios</button></div>
+          </form>
+        </details>
+        <form method="post" action="/panel/catalogos/unidades/{{ u.id }}/eliminar"
+              onsubmit="return confirm('¿Desactivar la unidad {{ u.nombre }}? Dejará de aparecer en los formularios de creación.');">
+          <button class="btn ghost" style="font-size:12px;padding:4px 10px">Eliminar</button>
+        </form>
+      </div>
+    </td>
+  </tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">No hay unidades registradas todavía.</p>{% endif %}
@@ -38,11 +63,37 @@
 <h2>Contrapartes</h2>
 {% if contrapartes %}
 <div class="tabla-scroll"><table>
-  <thead><tr><th>Razón social</th><th>Tipo</th><th>RUT</th><th>Contacto</th></tr></thead>
+  <thead><tr><th>Razón social</th><th>Tipo</th><th>RUT</th><th>Contacto</th><th style="text-align:right">Acciones</th></tr></thead>
   <tbody>
   {% for c in contrapartes %}
-  <tr><td>{{ c.razon_social }}</td><td>{{ c.tipo.value }}</td><td>{{ c.rut or '—' }}</td>
-    <td>{{ c.contacto_nombre or '—' }}{% if c.contacto_email %} · {{ c.contacto_email }}{% endif %}</td></tr>
+  <tr>
+    <td>{{ c.razon_social }}</td>
+    <td>{{ c.tipo.value }}</td>
+    <td>{{ c.rut or '—' }}</td>
+    <td>{{ c.contacto_nombre or '—' }}{% if c.contacto_email %} · {{ c.contacto_email }}{% endif %}</td>
+    <td>
+      <div style="display:flex;gap:6px;justify-content:flex-end">
+        <details>
+          <summary class="btn ghost" style="display:inline-block;font-size:12px;padding:4px 10px;cursor:pointer">Editar</summary>
+          <form method="post" action="/panel/catalogos/contrapartes/{{ c.id }}/editar" class="grid2" style="display:grid;margin-top:8px;text-align:left">
+            <label>Razón social <input type="text" name="razon_social" value="{{ c.razon_social }}" required></label>
+            <label>Tipo
+              <select name="tipo" required>{% for t in contraparte_tipos %}<option value="{{ t.value }}" {{ 'selected' if t.value==c.tipo.value }}>{{ t.value }}</option>{% endfor %}</select>
+            </label>
+            <label>RUT <input type="text" name="rut" value="{{ c.rut or '' }}"></label>
+            <label>Contacto (nombre) <input type="text" name="contacto_nombre" value="{{ c.contacto_nombre or '' }}"></label>
+            <label>Contacto (email) <input type="email" name="contacto_email" value="{{ c.contacto_email or '' }}"></label>
+            <label>Contacto (teléfono) <input type="text" name="contacto_telefono" value="{{ c.contacto_telefono or '' }}"></label>
+            <div style="grid-column:1/-1"><button class="btn" type="submit">Guardar cambios</button></div>
+          </form>
+        </details>
+        <form method="post" action="/panel/catalogos/contrapartes/{{ c.id }}/eliminar"
+              onsubmit="return confirm('¿Eliminar la contraparte {{ c.razon_social }}? Solo se puede si no está en uso.');">
+          <button class="btn ghost" style="font-size:12px;padding:4px 10px">Eliminar</button>
+        </form>
+      </div>
+    </td>
+  </tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">No hay contrapartes registradas todavía.</p>{% endif %}
@@ -65,10 +116,43 @@
 <h2>Formatos estándar <span class="muted">(Flujo Autogestionado)</span></h2>
 {% if formatos %}
 <div class="tabla-scroll"><table>
-  <thead><tr><th>Nombre</th><th>Versión</th><th>Vigente</th><th>Aprobado por</th></tr></thead>
+  <thead><tr><th>Nombre</th><th>Versión</th><th>Vigente</th><th>Aprobado por</th><th style="text-align:right">Acciones</th></tr></thead>
   <tbody>
   {% for f in formatos %}
-  <tr><td>{{ f.nombre }}</td><td>{{ f.version }}</td><td>{{ 'sí' if f.vigente else 'no' }}</td><td>{{ f.aprobado_por }}</td></tr>
+  <tr>
+    <td>{{ f.nombre }}</td>
+    <td>{{ f.version }}</td>
+    <td><span class="badge {{ 's-vigente' if f.vigente else 's-cerrado' }}">{{ 'sí' if f.vigente else 'no' }}</span></td>
+    <td>{{ f.aprobado_por }}</td>
+    <td>
+      <div style="display:flex;gap:6px;justify-content:flex-end">
+        <details>
+          <summary class="btn ghost" style="display:inline-block;font-size:12px;padding:4px 10px;cursor:pointer">Editar</summary>
+          <form method="post" action="/panel/catalogos/formatos/{{ f.id }}/editar" enctype="multipart/form-data" class="grid2" style="display:grid;margin-top:8px;text-align:left">
+            <label>Nombre <input type="text" name="nombre" value="{{ f.nombre }}" required></label>
+            <label>Versión <input type="number" name="version" value="{{ f.version }}" min="1"></label>
+            <label>Aprobado por <input type="text" name="aprobado_por" value="{{ f.aprobado_por }}" required></label>
+            <label>Fecha de aprobación <input type="date" name="fecha_aprobacion" value="{{ f.fecha_aprobacion }}" required></label>
+            <label style="grid-column:1/-1">Campos variables <span class="muted">(separados por coma)</span>
+              <input type="text" name="campos_variables" style="width:100%" value="{{ f.campos_variables|join(', ') }}">
+            </label>
+            <label style="grid-column:1/-1">Reemplazar archivo de la plantilla <span class="muted">(opcional — vacío conserva el checksum actual)</span>
+              <input type="file" name="plantilla_archivo" accept=".docx,.doc,.pdf" style="width:100%">
+            </label>
+            <label>Ruta de referencia <input type="text" name="ruta_plantilla" value="{{ f.ruta_plantilla }}" required></label>
+            <label style="flex-direction:row;align-items:center;gap:6px">
+              <input type="checkbox" name="vigente" value="1" {{ 'checked' if f.vigente }}> Vigente
+            </label>
+            <div style="grid-column:1/-1"><button class="btn" type="submit">Guardar cambios</button></div>
+          </form>
+        </details>
+        <form method="post" action="/panel/catalogos/formatos/{{ f.id }}/eliminar"
+              onsubmit="return confirm('¿Desactivar el formato {{ f.nombre }}? Dejará de estar disponible para Flujo Autogestionado.');">
+          <button class="btn ghost" style="font-size:12px;padding:4px 10px">Eliminar</button>
+        </form>
+      </div>
+    </td>
+  </tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">No hay formatos registrados todavía — sin esto, el Flujo Autogestionado no se puede usar.</p>{% endif %}
@@ -100,10 +184,46 @@
 <h2>Usuarios</h2>
 {% if usuarios %}
 <div class="tabla-scroll"><table>
-  <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th></tr></thead>
+  <thead><tr><th>Nombre</th><th>Email</th><th>Rol</th><th>Activo</th><th style="text-align:right">Acciones</th></tr></thead>
   <tbody>
   {% for u in usuarios %}
-  <tr><td>{{ u.nombre }}</td><td>{{ u.email }}</td><td>{{ icono_rol(u.rol.value) }} {{ u.rol.value }}</td></tr>
+  <tr>
+    <td>{{ u.nombre }}</td>
+    <td>{{ u.email }}</td>
+    <td>{{ icono_rol(u.rol.value) }} {{ u.rol.value }}</td>
+    <td><span class="badge {{ 's-vigente' if u.activo else 's-cerrado' }}">{{ 'activo' if u.activo else 'inactivo' }}</span></td>
+    <td>
+      <div style="display:flex;gap:6px;justify-content:flex-end">
+        <details>
+          <summary class="btn ghost" style="display:inline-block;font-size:12px;padding:4px 10px;cursor:pointer">Editar</summary>
+          <form method="post" action="/panel/catalogos/usuarios/{{ u.id }}/editar" class="grid2" style="display:grid;margin-top:8px;text-align:left">
+            <label>Nombre <input type="text" name="nombre" value="{{ u.nombre }}" required></label>
+            <label>Email <input type="email" name="email" value="{{ u.email }}" required></label>
+            <label>Rol
+              <select name="rol" required>{% for r in roles %}<option value="{{ r.value }}" {{ 'selected' if r.value==u.rol.value }}>{{ r.value }}</option>{% endfor %}</select>
+            </label>
+            <label>Unidad
+              <select name="unidad_id">
+                <option value="">— sin asignar —</option>
+                {% for un in unidades %}<option value="{{ un.id }}" {{ 'selected' if u.unidad_id==un.id }}>{{ un.nombre }}</option>{% endfor %}
+              </select>
+            </label>
+            <label>Nueva contraseña <span class="muted">(vacío = no cambiar)</span>
+              <input type="password" name="password">
+            </label>
+            <label style="flex-direction:row;align-items:center;gap:6px">
+              <input type="checkbox" name="activo" value="1" {{ 'checked' if u.activo }}> Activo (puede iniciar sesión)
+            </label>
+            <div style="grid-column:1/-1"><button class="btn" type="submit">Guardar cambios</button></div>
+          </form>
+        </details>
+        <form method="post" action="/panel/catalogos/usuarios/{{ u.id }}/eliminar"
+              onsubmit="return confirm('¿Desactivar a {{ u.nombre }}? No podrá volver a iniciar sesión.');">
+          <button class="btn ghost" style="font-size:12px;padding:4px 10px">Eliminar</button>
+        </form>
+      </div>
+    </td>
+  </tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">No hay usuarios registrados todavía.</p>{% endif %}

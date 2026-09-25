@@ -447,6 +447,110 @@ def test_admin_sistema_puede_todo(api, session, usuarios, unidad, contraparte):
     assert r.status_code == 303 and "ok=" in r.headers["location"]
 
 
+def test_editar_y_eliminar_unidad(api, session, usuarios, unidad):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        f"/panel/catalogos/unidades/{unidad.id}/editar",
+        data={"nombre": "Operaciones Renombrada", "tipo": "interna", "activo": "1"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(unidad)
+    assert unidad.nombre == "Operaciones Renombrada" and unidad.tipo.value == "interna"
+
+    # "Eliminar" desactiva, no borra (la unidad puede estar en uso).
+    r = api.post(f"/panel/catalogos/unidades/{unidad.id}/eliminar", follow_redirects=False)
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(unidad)
+    assert unidad.activo is False
+
+    # Una vez inactiva, ya no aparece en el combo de "Nueva solicitud"...
+    r = api.get("/panel/contratos/nuevo")
+    assert "Operaciones Renombrada" not in r.text
+    # ...pero sigue visible en el propio listado de Administración para poder reactivarla.
+    r = api.get("/panel/catalogos")
+    assert "Operaciones Renombrada" in r.text
+
+
+def test_editar_y_eliminar_contraparte(api, session, usuarios, contraparte):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        f"/panel/catalogos/contrapartes/{contraparte.id}/editar",
+        data={"razon_social": "Aseos del Sur Renombrada", "tipo": "proveedor"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(contraparte)
+    assert contraparte.razon_social == "Aseos del Sur Renombrada"
+
+    r = api.post(f"/panel/catalogos/contrapartes/{contraparte.id}/eliminar", follow_redirects=False)
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    from sqlalchemy import select
+    from app.models.core import Contraparte
+    assert session.scalars(select(Contraparte).where(Contraparte.id == contraparte.id)).first() is None
+
+
+def test_no_se_puede_eliminar_contraparte_en_uso(api, session, usuarios, unidad, contraparte):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    from app.enums import LineaContrato
+    from app.services.contratos import crear_contrato
+
+    crear_contrato(
+        session, codigo="CT-USO-1", linea=LineaContrato.A_regular, objeto="x",
+        unidad_solicitante=unidad, solicitante=usuarios[Rol.unidad_solicitante], contraparte=contraparte,
+    )
+    session.commit()
+    r = api.post(f"/panel/catalogos/contrapartes/{contraparte.id}/eliminar", follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+    from sqlalchemy import select
+    from app.models.core import Contraparte
+    assert session.scalars(select(Contraparte).where(Contraparte.id == contraparte.id)).first() is not None
+
+
+def test_editar_y_eliminar_formato(api, session, usuarios, formato):
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    r = api.post(
+        f"/panel/catalogos/formatos/{formato.id}/editar",
+        data={
+            "nombre": "NDA estandar v2", "version": str(formato.version), "aprobado_por": "Fiscalia",
+            "fecha_aprobacion": "2026-01-01", "ruta_plantilla": "formatos/nda_v3.docx", "vigente": "1",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(formato)
+    assert formato.nombre == "NDA estandar v2"
+
+    r = api.post(f"/panel/catalogos/formatos/{formato.id}/eliminar", follow_redirects=False)
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(formato)
+    assert formato.vigente is False
+
+
+def test_editar_y_eliminar_usuario(api, session, usuarios):
+    admin = _login(api, session, usuarios, rol=Rol.admin_sistema)
+    objetivo = usuarios[Rol.legal]
+    r = api.post(
+        f"/panel/catalogos/usuarios/{objetivo.id}/editar",
+        data={"nombre": "Legal Renombrado", "email": objetivo.email, "rol": "legal", "activo": "1"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(objetivo)
+    assert objetivo.nombre == "Legal Renombrado"
+
+    r = api.post(f"/panel/catalogos/usuarios/{objetivo.id}/eliminar", follow_redirects=False)
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(objetivo)
+    assert objetivo.activo is False
+
+    # No puede desactivarse a si mismo.
+    r = api.post(f"/panel/catalogos/usuarios/{admin.id}/eliminar", follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+    session.refresh(admin)
+    assert admin.activo is True
+
+
 def test_administracion_solo_para_admin_sistema(api, session, usuarios):
     """El modulo Administracion completo (catalogos y parametros del sistema) es
     exclusivo de admin_sistema — cualquier otro rol, aunque este autenticado, no

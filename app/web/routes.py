@@ -279,6 +279,8 @@ def panel_metricas(request: Request, db: Session = Depends(get_db)):
 
 
 def _catalogos_basicos(db: Session) -> dict:
+    """Para los desplegables de los formularios de creación (Nueva solicitud,
+    Nueva licitación, etc.): solo unidades/usuarios activos y formatos vigentes."""
     return {
         "unidades": list(db.scalars(select(Unidad).where(Unidad.activo.is_(True)).order_by(Unidad.nombre))),
         "contrapartes": list(db.scalars(select(Contraparte).order_by(Contraparte.razon_social))),
@@ -286,6 +288,18 @@ def _catalogos_basicos(db: Session) -> dict:
         "formatos": list(
             db.scalars(select(FormatoEstandar).where(FormatoEstandar.vigente.is_(True)).order_by(FormatoEstandar.nombre))
         ),
+    }
+
+
+def _catalogos_todos(db: Session) -> dict:
+    """Para el listado del propio módulo de Administración: incluye también
+    unidades/usuarios inactivos y formatos no vigentes, para poder editarlos
+    o reactivarlos."""
+    return {
+        "unidades": list(db.scalars(select(Unidad).order_by(Unidad.nombre))),
+        "contrapartes": list(db.scalars(select(Contraparte).order_by(Contraparte.razon_social))),
+        "usuarios": list(db.scalars(select(Usuario).order_by(Usuario.nombre))),
+        "formatos": list(db.scalars(select(FormatoEstandar).order_by(FormatoEstandar.nombre))),
     }
 
 
@@ -859,7 +873,7 @@ def panel_catalogos(request: Request, db: Session = Depends(get_db), error: Opti
             "monedas": list(Moneda),
             "masthead_image": "/static/img/masthead-archivo.jpg",
             "masthead_subtitle": "Catálogos y datos maestros",
-            **_catalogos_basicos(db),
+            **_catalogos_todos(db),
         },
         headers=SIN_CACHE,
     )
@@ -978,6 +992,188 @@ def crear_usuario_submit(
         db.rollback()
         return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo crear el usuario: ' + str(exc))}", status_code=303)
     return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Usuario creado')}", status_code=303)
+
+
+# ------------------------------------------------------- Administración: editar/eliminar
+@router.post("/panel/catalogos/unidades/{uid}/editar", include_in_schema=False)
+def editar_unidad_submit(
+    uid: int, request: Request, db: Session = Depends(get_db),
+    nombre: str = Form(...), tipo: str = Form(...), activo: Optional[str] = Form(None),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    unidad = obtener_o_404(db, Unidad, uid, "Unidad")
+    try:
+        unidad.nombre = nombre.strip()
+        unidad.tipo = UnidadTipo(tipo)
+        unidad.activo = bool(activo)
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo editar la unidad: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Unidad actualizada')}", status_code=303)
+
+
+@router.post("/panel/catalogos/unidades/{uid}/eliminar", include_in_schema=False)
+def eliminar_unidad_submit(uid: int, request: Request, db: Session = Depends(get_db)):
+    """'Eliminar' desactiva (activo=False) en vez de borrar: la unidad puede estar
+    referenciada por contratos, licitaciones o usuarios existentes."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    unidad = obtener_o_404(db, Unidad, uid, "Unidad")
+    unidad.activo = False
+    db.commit()
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Unidad desactivada')}", status_code=303)
+
+
+@router.post("/panel/catalogos/contrapartes/{cid}/editar", include_in_schema=False)
+def editar_contraparte_submit(
+    cid: int, request: Request, db: Session = Depends(get_db),
+    razon_social: str = Form(...), tipo: str = Form(...),
+    rut: Optional[str] = Form(None), contacto_nombre: Optional[str] = Form(None),
+    contacto_email: Optional[str] = Form(None), contacto_telefono: Optional[str] = Form(None),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    contraparte = obtener_o_404(db, Contraparte, cid, "Contraparte")
+    try:
+        contraparte.razon_social = razon_social.strip()
+        contraparte.tipo = ContraparteTipo(tipo)
+        contraparte.rut = rut or None
+        contraparte.contacto_nombre = contacto_nombre or None
+        contraparte.contacto_email = contacto_email or None
+        contraparte.contacto_telefono = contacto_telefono or None
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo editar la contraparte: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Contraparte actualizada')}", status_code=303)
+
+
+@router.post("/panel/catalogos/contrapartes/{cid}/eliminar", include_in_schema=False)
+def eliminar_contraparte_submit(cid: int, request: Request, db: Session = Depends(get_db)):
+    """Sin bandera de 'activo': se intenta un borrado real. Si está en uso (FK desde
+    un contrato o licitación), se rechaza con un mensaje claro en vez de un 500."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    contraparte = obtener_o_404(db, Contraparte, cid, "Contraparte")
+    try:
+        db.delete(contraparte)
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        return RedirectResponse(
+            url=f"/panel/catalogos?error={_msg('No se puede eliminar: la contraparte está en uso en algún contrato o licitación')}",
+            status_code=303,
+        )
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Contraparte eliminada')}", status_code=303)
+
+
+@router.post("/panel/catalogos/formatos/{fid}/editar", include_in_schema=False)
+async def editar_formato_submit(
+    fid: int, request: Request, db: Session = Depends(get_db),
+    nombre: str = Form(...), version: str = Form("1"), aprobado_por: str = Form(...),
+    fecha_aprobacion: str = Form(...), campos_variables: Optional[str] = Form(None),
+    ruta_plantilla: str = Form(...), plantilla_archivo: Optional[UploadFile] = File(None),
+    vigente: Optional[str] = Form(None),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    formato = obtener_o_404(db, FormatoEstandar, fid, "Formato")
+    try:
+        formato.nombre = nombre.strip()
+        formato.version = int(version or 1)
+        formato.aprobado_por = aprobado_por.strip()
+        formato.fecha_aprobacion = date.fromisoformat(fecha_aprobacion)
+        formato.campos_variables = [c.strip() for c in (campos_variables or "").split(",") if c.strip()]
+        formato.ruta_plantilla = ruta_plantilla.strip()
+        formato.vigente = bool(vigente)
+        if plantilla_archivo is not None and plantilla_archivo.filename:
+            contenido = await plantilla_archivo.read()
+            if contenido:
+                formato.checksum_base = sha256_bytes(contenido)
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo editar el formato: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Formato actualizado')}", status_code=303)
+
+
+@router.post("/panel/catalogos/formatos/{fid}/eliminar", include_in_schema=False)
+def eliminar_formato_submit(fid: int, request: Request, db: Session = Depends(get_db)):
+    """'Eliminar' marca vigente=False en vez de borrar: preserva el historial de
+    contratos autogestionados que ya se crearon con ese formato."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    formato = obtener_o_404(db, FormatoEstandar, fid, "Formato")
+    formato.vigente = False
+    db.commit()
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Formato desactivado')}", status_code=303)
+
+
+@router.post("/panel/catalogos/usuarios/{uid}/editar", include_in_schema=False)
+def editar_usuario_submit(
+    uid: int, request: Request, db: Session = Depends(get_db),
+    nombre: str = Form(...), email: str = Form(...), rol: str = Form(...),
+    unidad_id: Optional[str] = Form(None), activo: Optional[str] = Form(None),
+    password: Optional[str] = Form(None),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    if uid == usuario.id and not activo:
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No puedes desactivar tu propia cuenta')}", status_code=303)
+    objetivo = obtener_o_404(db, Usuario, uid, "Usuario")
+    try:
+        objetivo.nombre = nombre.strip()
+        objetivo.email = email.strip().lower()
+        objetivo.rol = Rol(rol)
+        objetivo.unidad_id = int(unidad_id) if unidad_id else None
+        objetivo.activo = bool(activo)
+        if password:
+            objetivo.password_hash = hash_password(password)
+        db.commit()
+    except (ValueError, IntegrityError) as exc:
+        db.rollback()
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No se pudo editar el usuario: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Usuario actualizado')}", status_code=303)
+
+
+@router.post("/panel/catalogos/usuarios/{uid}/eliminar", include_in_schema=False)
+def eliminar_usuario_submit(uid: int, request: Request, db: Session = Depends(get_db)):
+    """'Eliminar' desactiva la cuenta (activo=False, ya bloquea el login) en vez de
+    borrarla: preserva la trazabilidad (EventoEstado.usuario_id) de lo que hizo."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    if uid == usuario.id:
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg('No puedes desactivar tu propia cuenta')}", status_code=303)
+    objetivo = obtener_o_404(db, Usuario, uid, "Usuario")
+    objetivo.activo = False
+    db.commit()
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Usuario desactivado')}", status_code=303)
 
 
 @router.get("/panel/reporte", include_in_schema=False)

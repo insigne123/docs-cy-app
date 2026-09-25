@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 import pytest
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.orm import Session, sessionmaker
 from sqlalchemy.pool import StaticPool
 
@@ -33,6 +33,15 @@ def session() -> Session:
         poolclass=StaticPool,
         future=True,
     )
+    # Igual que app/database.py: SQLite no aplica FOREIGN KEY por defecto. Sin esto,
+    # borrar una fila referenciada (ej. una Contraparte en uso) no falla en las
+    # pruebas aunque sí fallaría en Postgres (producción) — un falso negativo.
+    @event.listens_for(engine, "connect")
+    def _fk_pragma(dbapi_connection, connection_record):  # pragma: no cover
+        cur = dbapi_connection.cursor()
+        cur.execute("PRAGMA foreign_keys=ON")
+        cur.close()
+
     Base.metadata.create_all(engine)
     factory = sessionmaker(bind=engine, expire_on_commit=False, future=True)
     s = factory()
