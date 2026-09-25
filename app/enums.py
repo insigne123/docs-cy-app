@@ -75,7 +75,7 @@ class LineaContrato(_StrEnum):
 NOMBRES_LINEA: dict[str, str] = {
     LineaContrato.A_regular.value: "Flujo Regular",
     LineaContrato.B_autogestionado.value: "Flujo Autogestionado",
-    LineaContrato.C_licitacion.value: "Flujo Completo",
+    LineaContrato.C_licitacion.value: "Licitaciones",
 }
 
 

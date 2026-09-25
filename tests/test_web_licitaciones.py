@@ -33,7 +33,7 @@ def test_crear_licitacion_y_avanzar_hasta_adjudicar(api, session, usuarios, unid
     detalle = api.get(ficha_url)
     assert detalle.status_code == 200
     assert "Mantención de flota" in detalle.text
-    assert "Flujo Completo" in detalle.text
+    assert "Licitaciones" in detalle.text
 
     def transicion(hacia, actor, **extra):
         _login(api, session, usuarios, actor)
@@ -54,5 +54,5 @@ def test_crear_licitacion_y_avanzar_hasta_adjudicar(api, session, usuarios, unid
     contrato_url = r.headers["location"].split("?")[0]
     ficha_contrato = api.get(contrato_url)
     assert ficha_contrato.status_code == 200
-    assert "Flujo Completo" in ficha_contrato.text
+    assert "Licitaciones" in ficha_contrato.text
     assert "formalizacion_ajuste" in ficha_contrato.text
