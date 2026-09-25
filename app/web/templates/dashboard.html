@@ -7,6 +7,8 @@
   {{ ind.total }} contrato(s) · datos al {{ datos.hoy.strftime('%Y-%m-%d') }}
 </div>
 
+{% if error %}<p class="n-critica">{{ error }}</p>{% endif %}
+
 <div class="nav">
   {% if alertas.total %}
   <a class="badge s-vencido" href="/panel/alertas">&#9888; {{ alertas.total }} alerta(s)</a>

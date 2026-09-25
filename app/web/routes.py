@@ -161,6 +161,18 @@ def _usuario_o_redirect(request: Request, db: Session):
     return usuario, None
 
 
+def _requiere_rol(usuario, redirect_url: str, *roles: Rol) -> Optional[RedirectResponse]:
+    """Limita una acción de escritura a los roles indicados (admin_sistema siempre
+    puede, como superusuario técnico de arranque del sistema — no es un rol de
+    negocio de la Documentación del proceso). Ver docs/CLAUDE.md §2 para el mapeo
+    rol -> responsabilidad usado para decidir cada conjunto de roles permitido."""
+    if usuario.rol in roles or usuario.rol == Rol.admin_sistema:
+        return None
+    nombres = ", ".join(r.value for r in roles)
+    mensaje = f"Tu rol ({usuario.rol.value}) no tiene esta atribución — se requiere: {nombres}"
+    return RedirectResponse(url=f"{redirect_url}?error={_msg(mensaje)}", status_code=303, headers=SIN_CACHE)
+
+
 def _decimal_o_none(v: Optional[str]) -> Optional[Decimal]:
     if not v:
         return None
@@ -180,7 +192,10 @@ def raiz() -> RedirectResponse:
 
 
 @router.get("/panel", response_class=HTMLResponse, include_in_schema=False)
-def panel(request: Request, filtros: dict = Depends(filtros_panel), db: Session = Depends(get_db)):
+def panel(
+    request: Request, filtros: dict = Depends(filtros_panel), db: Session = Depends(get_db),
+    error: Optional[str] = None,
+):
     if (r := _requiere_login(request, db)) is not None:
         return r
     datos = construir_dashboard(db, **filtros)
@@ -193,6 +208,7 @@ def panel(request: Request, filtros: dict = Depends(filtros_panel), db: Session 
             "filtros": filtros,
             "alertas": resumen_alertas(db),
             "licitaciones_activas": listar_licitaciones_activas(db)[:8],
+            "error": error,
         },
         headers=SIN_CACHE,
     )
@@ -278,6 +294,8 @@ def nuevo_contrato_form(request: Request, db: Session = Depends(get_db), error: 
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
+    if (r := _requiere_rol(usuario, "/panel", Rol.unidad_solicitante)) is not None:
+        return r
     return templates.TemplateResponse(
         request=request,
         name="nuevo_contrato.html",
@@ -312,6 +330,8 @@ def nuevo_contrato_submit(
 ):
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/contratos/nuevo", Rol.unidad_solicitante)) is not None:
         return r
     unidad = db.get(Unidad, unidad_solicitante_id)
     contraparte = db.get(Contraparte, int(contraparte_id)) if contraparte_id else None
@@ -418,6 +438,8 @@ def editar_contrato_submit(
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
+    if (r := _requiere_rol(usuario, f"/panel/contratos/{cid}", Rol.legal, Rol.admin_contratos)) is not None:
+        return r
     contrato = obtener_o_404(db, Contrato, cid, "Contrato")
 
     contrato.contraparte_id = int(contraparte_id) if contraparte_id else None
@@ -454,8 +476,10 @@ def agregar_garantia_submit(
     emisor: Optional[str] = Form(None),
     numero: Optional[str] = Form(None),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, f"/panel/contratos/{cid}", Rol.financiera)) is not None:
         return r
     obtener_o_404(db, Contrato, cid, "Contrato")
     try:
@@ -491,8 +515,10 @@ def agregar_hito_submit(
     responsable_id: Optional[str] = Form(None),
     notas: Optional[str] = Form(None),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, f"/panel/contratos/{cid}", Rol.tecnica, Rol.admin_contratos)) is not None:
         return r
     obtener_o_404(db, Contrato, cid, "Contrato")
     try:
@@ -512,8 +538,10 @@ def agregar_hito_submit(
 def actualizar_estado_hito_submit(
     cid: int, hid: int, request: Request, db: Session = Depends(get_db), estado: str = Form(...),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, f"/panel/contratos/{cid}", Rol.tecnica, Rol.admin_contratos)) is not None:
         return r
     hito = obtener_o_404(db, Hito, hid, "Hito")
     if hito.contrato_id != cid:
@@ -535,8 +563,10 @@ def agregar_multa_submit(
     moneda: str = Form(...),
     fecha_aplicacion: str = Form(...),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, f"/panel/contratos/{cid}", Rol.financiera, Rol.admin_contratos)) is not None:
         return r
     obtener_o_404(db, Contrato, cid, "Contrato")
     try:
@@ -554,8 +584,10 @@ def agregar_multa_submit(
 def actualizar_estado_multa_submit(
     cid: int, mid: int, request: Request, db: Session = Depends(get_db), estado: str = Form(...),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, f"/panel/contratos/{cid}", Rol.financiera, Rol.admin_contratos)) is not None:
         return r
     multa = obtener_o_404(db, Multa, mid, "Multa")
     if multa.contrato_id != cid:
@@ -616,6 +648,8 @@ def nueva_licitacion_form(request: Request, db: Session = Depends(get_db), error
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
         return r
+    if (r := _requiere_rol(usuario, "/panel", Rol.admin_licitaciones)) is not None:
+        return r
     return templates.TemplateResponse(
         request=request,
         name="nueva_licitacion.html",
@@ -642,6 +676,8 @@ def nueva_licitacion_submit(
 ):
     usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/licitaciones/nuevo", Rol.admin_licitaciones)) is not None:
         return r
     unidad = db.get(Unidad, unidad_solicitante_id)
     if unidad is None:
@@ -773,8 +809,10 @@ def agregar_garantia_licitacion_submit(
     emisor: Optional[str] = Form(None),
     numero: Optional[str] = Form(None),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, f"/panel/licitaciones/{lid}", Rol.financiera)) is not None:
         return r
     obtener_o_404(db, Licitacion, lid, "Licitación")
     try:
@@ -832,8 +870,10 @@ def crear_unidad_submit(
     nombre: str = Form(...),
     tipo: str = Form(...),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
         return r
     try:
         db.add(Unidad(nombre=nombre.strip(), tipo=UnidadTipo(tipo)))
@@ -855,8 +895,13 @@ def crear_contraparte_submit(
     contacto_email: Optional[str] = Form(None),
     contacto_telefono: Optional[str] = Form(None),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(
+        usuario, "/panel/catalogos",
+        Rol.unidad_solicitante, Rol.admin_licitaciones, Rol.legal, Rol.admin_contratos,
+    )) is not None:
         return r
     try:
         db.add(Contraparte(
@@ -884,8 +929,10 @@ async def crear_formato_submit(
     plantilla_archivo: UploadFile = File(...),
     vigente: Optional[str] = Form(None),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.legal)) is not None:
         return r
     contenido = await plantilla_archivo.read()
     if not contenido:
@@ -914,8 +961,10 @@ def crear_usuario_submit(
     unidad_id: Optional[str] = Form(None),
     password: Optional[str] = Form(None),
 ):
-    _, r = _usuario_o_redirect(request, db)
+    usuario, r = _usuario_o_redirect(request, db)
     if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
         return r
     try:
         nuevo = Usuario(

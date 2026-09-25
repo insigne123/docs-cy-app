@@ -145,6 +145,7 @@
   </header>
   <div class="shell">
     {% if request.url.path != '/login' %}
+    {% set _u = usuario_sesion(request) %}
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-head">
         <span class="brand">Contratos</span>
@@ -159,14 +160,18 @@
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
           Listado de contratos
         </a>
+        {% if not _u or _u.rol.value in ('unidad_solicitante', 'admin_sistema') %}
         <a href="/panel/contratos/nuevo" class="{{ 'active' if request.url.path == '/panel/contratos/nuevo' }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V9z"/><path d="M13 3v6h6"/><line x1="12" y1="13" x2="12" y2="19"/><line x1="9" y1="16" x2="15" y2="16"/></svg>
           Nueva solicitud
         </a>
+        {% endif %}
+        {% if not _u or _u.rol.value in ('admin_licitaciones', 'admin_sistema') %}
         <a href="/panel/licitaciones/nuevo" class="{{ 'active' if request.url.path == '/panel/licitaciones/nuevo' }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="3" x2="12" y2="21"/><line x1="5" y1="7" x2="19" y2="7"/><path d="M5 7 2 14a3 3 0 0 0 6 0Z"/><path d="M19 7 16 14a3 3 0 0 0 6 0Z"/></svg>
           Nueva licitación
         </a>
+        {% endif %}
         <a href="/panel/vigencias" class="{{ 'active' if request.url.path == '/panel/vigencias' }}">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><polyline points="12 7 12 12 16 14"/></svg>
           Gestión de vigencias
@@ -184,7 +189,6 @@
           Alertas
         </a>
       </nav>
-      {% set _u = usuario_sesion(request) %}
       {% if _u %}
       <div class="sidebar-foot">
         <div class="who">

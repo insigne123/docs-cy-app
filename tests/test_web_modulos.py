@@ -107,6 +107,8 @@ def test_agregar_garantia_y_transicion(api, session, usuarios, unidad, contrapar
     assert r.status_code == 303
     assert "error=" in r.headers["location"]
 
+    # Constituir la garantía es atribución exclusiva de Financiera (ver docs/CLAUDE.md).
+    _login(api, session, usuarios, rol=Rol.financiera)
     r = api.post(
         f"/panel/contratos/{c.id}/garantias",
         data={
@@ -118,6 +120,7 @@ def test_agregar_garantia_y_transicion(api, session, usuarios, unidad, contrapar
     )
     assert r.status_code == 303 and "ok=" in r.headers["location"]
 
+    _login(api, session, usuarios, rol=Rol.legal)
     r = api.post(f"/panel/contratos/{c.id}/transicion", data={"hacia": "firma"}, follow_redirects=False)
     assert r.status_code == 303 and "ok=" in r.headers["location"]
     session.refresh(c)
@@ -358,6 +361,90 @@ def test_boton_cerrar_sesion_visible_tras_login(api, session, usuarios):
 
     r = api.get("/panel/contratos/nuevo", follow_redirects=False)
     assert r.status_code == 303 and r.headers["location"].startswith("/login")
+
+
+def test_rol_no_autorizado_no_puede_crear_solicitud(api, session, usuarios, unidad, contraparte):
+    """Solo Unidad Solicitante (y admin_sistema) ingresa solicitudes."""
+    _login(api, session, usuarios, rol=Rol.financiera)
+    r = api.post(
+        "/panel/contratos/nuevo",
+        data={
+            "linea": "A_regular", "objeto": "x",
+            "unidad_solicitante_id": str(unidad.id), "contraparte_id": str(contraparte.id),
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    assert "error=" in r.headers["location"]
+    assert "financiera" in r.headers["location"]
+
+    r = api.get("/panel/contratos/nuevo", follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+
+
+def test_rol_no_autorizado_no_puede_agregar_garantia(api, session, usuarios, unidad, contraparte):
+    """Constituir garantías es facultad exclusiva de Financiera."""
+    u = _login(api, session, usuarios, rol=Rol.tecnica)
+    from app.enums import LineaContrato
+    from app.services.contratos import crear_contrato
+
+    c = crear_contrato(
+        session, codigo="CT-ROL-1", linea=LineaContrato.A_regular, objeto="x",
+        unidad_solicitante=unidad, solicitante=usuarios[Rol.unidad_solicitante], contraparte=contraparte,
+    )
+    session.commit()
+    r = api.post(
+        f"/panel/contratos/{c.id}/garantias",
+        data={
+            "tipo": "fiel_cumplimiento", "instrumento": "boleta_bancaria",
+            "monto": "100000", "moneda": "CLP",
+            "fecha_emision": "2026-01-01", "fecha_vencimiento": "2027-01-01",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+    from sqlalchemy import select
+    from app.models.contrato import Garantia
+    assert session.scalars(select(Garantia)).first() is None
+
+
+def test_rol_no_autorizado_no_puede_crear_usuario(api, session, usuarios):
+    """Crear usuarios (con contraseña) es exclusivo de admin_sistema, para evitar
+    escalamiento de privilegios desde cualquier otro rol."""
+    _login(api, session, usuarios, rol=Rol.legal)
+    r = api.post(
+        "/panel/catalogos/usuarios",
+        data={"nombre": "Intruso", "email": "intruso@empresa.cl", "rol": "admin_sistema"},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+    from sqlalchemy import select
+    from app.models.core import Usuario
+    assert session.scalars(select(Usuario).where(Usuario.email == "intruso@empresa.cl")).first() is None
+
+
+def test_admin_sistema_puede_todo(api, session, usuarios, unidad, contraparte):
+    """admin_sistema es el superusuario tecnico de arranque (no un rol de negocio
+    documentado) y puede ejecutar cualquier accion restringida por rol."""
+    _login(api, session, usuarios, rol=Rol.admin_sistema)
+    from app.enums import LineaContrato
+    from app.services.contratos import crear_contrato
+
+    c = crear_contrato(
+        session, codigo="CT-ROL-2", linea=LineaContrato.A_regular, objeto="x",
+        unidad_solicitante=unidad, solicitante=usuarios[Rol.unidad_solicitante], contraparte=contraparte,
+    )
+    session.commit()
+    r = api.post(
+        f"/panel/contratos/{c.id}/garantias",
+        data={
+            "tipo": "fiel_cumplimiento", "instrumento": "boleta_bancaria",
+            "monto": "100000", "moneda": "CLP",
+            "fecha_emision": "2026-01-01", "fecha_vencimiento": "2027-01-01",
+        },
+        follow_redirects=False,
+    )
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
 
 
 def test_licitacion_activa_aparece_en_tablero(api, session, usuarios, unidad):
