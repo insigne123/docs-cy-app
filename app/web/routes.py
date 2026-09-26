@@ -19,6 +19,7 @@ from app.config import settings
 from app.enums import (
     CategoriaContrato,
     ContraparteTipo,
+    DocumentoTipo,
     EstadoContrato,
     EstadoLicitacion,
     GarantiaEstado,
@@ -35,13 +36,14 @@ from app.enums import (
     icono_rol,
     nombre_linea,
 )
-from app.models.contrato import Contrato, Garantia, Hito, Multa
+from app.models.contrato import Contrato, Documento, Garantia, Hito, Multa
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
 from app.services.auditoria import historial_global
 from app.services.busqueda import buscar_global
 from app.services.comentarios import agregar_comentario, listar_comentarios
+from app.services.documentos import subir_documento
 from app.services.auth import (
     crear_token,
     esta_bloqueado,
@@ -566,6 +568,7 @@ def detalle(
             "hito_tipos": list(HitoTipo),
             "hito_estados": list(HitoEstado),
             "multa_estados": list(MultaEstado),
+            "documento_tipos": list(DocumentoTipo),
             "comentarios": listar_comentarios(db, "contrato", cid),
             **_catalogos_basicos(db),
         },
@@ -753,6 +756,50 @@ def actualizar_estado_multa_submit(
     return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Multa actualizada')}", status_code=303)
 
 
+@router.post("/panel/contratos/{cid}/documentos", include_in_schema=False)
+async def subir_documento_contrato_submit(
+    cid: int, request: Request, db: Session = Depends(get_db),
+    tipo: str = Form(...), archivo: UploadFile = File(...),
+):
+    """Sube el archivo real (borrador, contrato firmado, anexo, etc.): un
+    Documento con contenido guardado satisface por sí solo los guards
+    g_borrador_cargado / g_documento_firmado al avanzar de estado, sin
+    necesitar además el checkbox de confirmación del formulario de avance."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    obtener_o_404(db, Contrato, cid, "Contrato")
+    contenido = await archivo.read()
+    if not contenido:
+        return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('El archivo está vacío')}", status_code=303)
+    try:
+        subir_documento(
+            db, entidad_tipo="contrato", entidad_id=cid, tipo=DocumentoTipo(tipo),
+            nombre_archivo=archivo.filename or "documento", content_type=archivo.content_type or "application/octet-stream",
+            contenido=contenido, cargado_por_id=usuario.id,
+        )
+        db.commit()
+    except ValueError as exc:
+        return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('Tipo de documento inválido: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Documento subido')}", status_code=303)
+
+
+@router.get("/panel/contratos/{cid}/documentos/{did}/archivo", include_in_schema=False)
+def previsualizar_documento_contrato(cid: int, did: int, request: Request, db: Session = Depends(get_db)):
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    documento = obtener_o_404(db, Documento, did, "Documento")
+    if documento.entidad_tipo != "contrato" or documento.entidad_id != cid:
+        raise HTTPException(status_code=404, detail="El documento no pertenece a este contrato")
+    if not documento.contenido:
+        raise HTTPException(status_code=404, detail="Este documento no tiene un archivo disponible para previsualizar")
+    return Response(
+        content=documento.contenido,
+        media_type=documento.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'inline; filename="{documento.nombre_archivo}"'},
+    )
+
+
 @router.post("/panel/contratos/{cid}/comentarios", include_in_schema=False)
 def agregar_comentario_contrato_submit(
     cid: int, request: Request, db: Session = Depends(get_db), texto: str = Form(...),
@@ -910,6 +957,7 @@ def detalle_licitacion(
             "garantia_tipos": list(GarantiaTipo),
             "garantia_instrumentos": list(GarantiaInstrumento),
             "monedas": list(Moneda),
+            "documento_tipos": list(DocumentoTipo),
             "comentarios": listar_comentarios(db, "licitacion", lid),
         },
         headers=SIN_CACHE,
@@ -946,6 +994,46 @@ async def transicion_licitacion_submit(lid: int, request: Request, db: Session =
     except ValueError as exc:
         return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Estado inválido: ' + str(exc))}", status_code=303)
     return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Estado actualizado')}", status_code=303)
+
+
+@router.post("/panel/licitaciones/{lid}/documentos", include_in_schema=False)
+async def subir_documento_licitacion_submit(
+    lid: int, request: Request, db: Session = Depends(get_db),
+    tipo: str = Form(...), archivo: UploadFile = File(...),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    obtener_o_404(db, Licitacion, lid, "Licitación")
+    contenido = await archivo.read()
+    if not contenido:
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('El archivo está vacío')}", status_code=303)
+    try:
+        subir_documento(
+            db, entidad_tipo="licitacion", entidad_id=lid, tipo=DocumentoTipo(tipo),
+            nombre_archivo=archivo.filename or "documento", content_type=archivo.content_type or "application/octet-stream",
+            contenido=contenido, cargado_por_id=usuario.id,
+        )
+        db.commit()
+    except ValueError as exc:
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Tipo de documento inválido: ' + str(exc))}", status_code=303)
+    return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Documento subido')}", status_code=303)
+
+
+@router.get("/panel/licitaciones/{lid}/documentos/{did}/archivo", include_in_schema=False)
+def previsualizar_documento_licitacion(lid: int, did: int, request: Request, db: Session = Depends(get_db)):
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    documento = obtener_o_404(db, Documento, did, "Documento")
+    if documento.entidad_tipo != "licitacion" or documento.entidad_id != lid:
+        raise HTTPException(status_code=404, detail="El documento no pertenece a esta licitación")
+    if not documento.contenido:
+        raise HTTPException(status_code=404, detail="Este documento no tiene un archivo disponible para previsualizar")
+    return Response(
+        content=documento.contenido,
+        media_type=documento.content_type or "application/octet-stream",
+        headers={"Content-Disposition": f'inline; filename="{documento.nombre_archivo}"'},
+    )
 
 
 @router.post("/panel/licitaciones/{lid}/comentarios", include_in_schema=False)

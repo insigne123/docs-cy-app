@@ -241,13 +241,22 @@
 </details>
 
 <h2>Documentos</h2>
+<form method="post" action="/panel/contratos/{{ c.id }}/documentos" enctype="multipart/form-data" class="grid2" style="display:grid;margin-bottom:12px">
+  <label>Tipo
+    <select name="tipo" required>{% for t in documento_tipos %}<option value="{{ t.value }}">{{ t.value }}</option>{% endfor %}</select>
+  </label>
+  <label style="grid-column:1/-1">Archivo <input type="file" name="archivo" required style="width:100%"></label>
+  <div style="grid-column:1/-1"><button class="btn" type="submit">Subir documento</button></div>
+</form>
 {% if f.documentos %}
 <div class="tabla-scroll"><table>
-  <thead><tr><th>Tipo</th><th>Archivo</th><th>Versión</th><th>Cargado</th></tr></thead>
+  <thead><tr><th>Tipo</th><th>Archivo</th><th>Versión</th><th>Cargado</th><th></th></tr></thead>
   <tbody>
   {% for d in f.documentos %}
   <tr><td>{{ d.tipo.value }}</td><td>{{ d.nombre_archivo }}</td><td>{{ d.version }}</td>
-    <td>{{ d.cargado_en.strftime('%Y-%m-%d') }}</td></tr>
+    <td>{{ d.cargado_en.strftime('%Y-%m-%d') }}</td>
+    <td>{% if d.contenido %}<a href="/panel/contratos/{{ c.id }}/documentos/{{ d.id }}/archivo" target="_blank" rel="noopener">Previsualizar</a>{% endif %}</td>
+  </tr>
   {% endfor %}
   </tbody></table></div>
 {% else %}<p class="muted">—</p>{% endif %}

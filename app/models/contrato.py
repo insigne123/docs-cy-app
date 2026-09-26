@@ -12,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Text,
@@ -169,6 +170,11 @@ class Documento(Base, TimestampMixin):
     hash_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     cargado_por_id: Mapped[int] = mapped_column(ForeignKey("usuario.id"))
     cargado_en: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    # Contenido real del archivo subido, para poder previsualizarlo (antes
+    # 'ruta' era solo texto libre, sin un archivo real detrás). Nulo en
+    # documentos registrados antes de esta funcionalidad.
+    content_type: Mapped[Optional[str]] = mapped_column(String(120), nullable=True)
+    contenido: Mapped[Optional[bytes]] = mapped_column(LargeBinary, nullable=True)
 
 
 class Comentario(Base, TimestampMixin):
