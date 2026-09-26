@@ -43,6 +43,7 @@
   </label>
   <button class="btn" type="submit">Filtrar</button>
   <a class="btn ghost" href="/panel/contratos">Limpiar</a>
+  <a class="btn ghost" href="/panel/contratos/exportar?{{ request.url.query }}">Exportar a XLSX</a>
 </form>
 
 {% if not filas %}

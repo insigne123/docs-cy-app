@@ -125,6 +125,47 @@ def test_transicion_api_usa_identidad_de_sesion_no_del_payload(api, session, usu
     assert r.status_code == 403
 
 
+def test_login_se_bloquea_tras_intentos_fallidos(api, session, usuarios):
+    from app.services.auth import MAX_INTENTOS_LOGIN, hash_password
+
+    u = usuarios[Rol.unidad_solicitante]
+    u.password_hash = hash_password("clave-correcta")
+    session.commit()
+
+    for _ in range(MAX_INTENTOS_LOGIN):
+        r = api.post("/login", data={"email": u.email, "password": "mala"}, follow_redirects=False)
+        assert r.status_code == 303 and "error=1" in r.headers["location"]
+
+    # Ya alcanzó el máximo: aunque ahora mande la clave correcta, queda bloqueado.
+    r = api.post("/login", data={"email": u.email, "password": "clave-correcta"}, follow_redirects=False)
+    assert r.status_code == 303 and "error=bloqueado" in r.headers["location"]
+
+    session.refresh(u)
+    assert u.bloqueado_hasta is not None
+
+    # Se levanta manualmente (o expiraría solo): un login correcto lo resetea.
+    u.bloqueado_hasta = None
+    session.commit()
+    r = api.post("/login", data={"email": u.email, "password": "clave-correcta"}, follow_redirects=False)
+    assert r.status_code == 303 and "error" not in r.headers["location"]
+    session.refresh(u)
+    assert u.intentos_fallidos == 0
+
+
+def test_login_api_se_bloquea_tras_intentos_fallidos(api, session, usuarios):
+    from app.services.auth import MAX_INTENTOS_LOGIN, hash_password
+
+    u = usuarios[Rol.legal]
+    u.password_hash = hash_password("clave-correcta")
+    session.commit()
+
+    for _ in range(MAX_INTENTOS_LOGIN):
+        assert api.post("/auth/login", json={"email": u.email, "password": "mala"}).status_code == 401
+
+    r = api.post("/auth/login", json={"email": u.email, "password": "clave-correcta"})
+    assert r.status_code == 429
+
+
 def test_crear_usuario_con_password(api):
     r = api.post(
         "/usuarios",

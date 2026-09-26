@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Mis tareas · Panel de Contratos{% endblock %}
+{% block body %}
+<h1>Mis tareas</h1>
+<div class="sub">
+  Contratos y licitaciones que están esperando una acción tuya ahora mismo,
+  según tu rol y el estado en que se encuentran. Esto no depende del Tablero:
+  aparece igual aunque tu rol no tenga acceso a él.
+</div>
+
+{% if tareas.total == 0 %}
+  <div class="empty">No tienes tareas pendientes por ahora.</div>
+{% endif %}
+
+{% if tareas.contratos %}
+<section>
+  <h2>Contratos <span class="muted">({{ tareas.contratos|length }})</span></h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Código</th><th>Objeto</th><th>Contraparte</th><th>Flujo</th><th>Estado</th><th>Ingreso</th></tr></thead>
+      <tbody>
+      {% for c in tareas.contratos %}
+        <tr>
+          <td><a href="/panel/contratos/{{ c.id }}">{{ c.codigo }}</a></td>
+          <td class="obj">{{ c.objeto }}</td>
+          <td>{{ c.contraparte or '—' }}</td>
+          <td><span class="badge l-{{ c.linea }}">{{ c.linea_nombre }}</span></td>
+          <td>{{ c.estado.replace('_',' ') }}</td>
+          <td>{{ c.fecha_ingreso.strftime('%Y-%m-%d') if c.fecha_ingreso else '—' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if tareas.licitaciones %}
+<section>
+  <h2>Licitaciones <span class="muted">({{ tareas.licitaciones|length }})</span></h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Código</th><th>Objeto</th><th>Estado</th><th>Ingreso</th></tr></thead>
+      <tbody>
+      {% for l in tareas.licitaciones %}
+        <tr>
+          <td><a href="/panel/licitaciones/{{ l.id }}">{{ l.codigo }}</a></td>
+          <td class="obj">{{ l.objeto }}</td>
+          <td>{{ l.estado.replace('_',' ') }}</td>
+          <td>{{ l.fecha_ingreso.strftime('%Y-%m-%d') if l.fecha_ingreso else '—' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

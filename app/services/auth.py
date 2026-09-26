@@ -10,12 +10,16 @@ import hmac
 import json
 import os
 import time
+from datetime import datetime, timedelta
 from typing import Optional
 
 from app.config import settings
 
 _ALGO = "pbkdf2_sha256"
 _ROUNDS = 200_000
+
+MAX_INTENTOS_LOGIN = 5
+BLOQUEO_LOGIN_MINUTOS = 15
 
 
 def hash_password(password: str, *, salt: Optional[bytes] = None, rounds: int = _ROUNDS) -> str:
@@ -37,6 +41,30 @@ def verify_password(password: str, almacenado: Optional[str]) -> bool:
         return hmac.compare_digest(dk, base64.b64decode(dk_b64))
     except (ValueError, TypeError):
         return False
+
+
+def esta_bloqueado(usuario) -> Optional[int]:
+    """Minutos que faltan para que el bloqueo termine, o None si no está
+    bloqueado. Protege contra fuerza bruta sobre el password de un usuario
+    puntual — no sustituye un límite por IP, que necesitaría un almacén
+    compartido entre instancias de Cloud Run."""
+    if usuario.bloqueado_hasta is None:
+        return None
+    restante = usuario.bloqueado_hasta - datetime.utcnow()
+    if restante.total_seconds() <= 0:
+        return None
+    return max(1, int(restante.total_seconds() // 60) + 1)
+
+
+def registrar_intento_fallido(usuario) -> None:
+    usuario.intentos_fallidos = (usuario.intentos_fallidos or 0) + 1
+    if usuario.intentos_fallidos >= MAX_INTENTOS_LOGIN:
+        usuario.bloqueado_hasta = datetime.utcnow() + timedelta(minutes=BLOQUEO_LOGIN_MINUTOS)
+
+
+def registrar_intento_exitoso(usuario) -> None:
+    usuario.intentos_fallidos = 0
+    usuario.bloqueado_hasta = None
 
 
 def crear_token(usuario_id: int, *, ttl_segundos: int = 8 * 3600) -> str:

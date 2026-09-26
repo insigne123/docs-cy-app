@@ -211,6 +211,34 @@ def test_listado_contratos_filtra_por_estado(api, session, usuarios, cartera):
     assert "C-VIG" in r.text
 
 
+def test_exportar_listado_contratos_xlsx(api, session, usuarios, cartera):
+    import io
+    from openpyxl import load_workbook
+
+    _login(api, session, usuarios, rol=Rol.admin_contratos)
+    r = api.get("/panel/contratos/exportar")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("application/vnd.openxmlformats")
+    wb = load_workbook(io.BytesIO(r.content))
+    ws = wb.active
+    codigos = {row[0].value for row in ws.iter_rows(min_row=2)}
+    for codigo in ("C-VIG", "C-PORVENCER", "C-VENCIDO", "C-RENOV", "C-TRAMITE"):
+        assert codigo in codigos
+
+    # Respeta los mismos filtros que el listado en pantalla.
+    r = api.get("/panel/contratos/exportar?estado=vigente")
+    wb = load_workbook(io.BytesIO(r.content))
+    codigos = {row[0].value for row in wb.active.iter_rows(min_row=2)}
+    assert "C-TRAMITE" not in codigos
+    assert "C-VIG" in codigos
+
+
+def test_exportar_listado_bloqueado_para_unidad_solicitante(api, session, usuarios, cartera):
+    _login(api, session, usuarios, rol=Rol.unidad_solicitante)
+    r = api.get("/panel/contratos/exportar", follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+
+
 def test_vigencias_lista_ordenada_por_urgencia(api, session, usuarios, cartera):
     _login(api, session, usuarios, rol=Rol.admin_contratos)
     r = api.get("/panel/vigencias")

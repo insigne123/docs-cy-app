@@ -7,6 +7,7 @@
   <div class="sub">Grupo Expro · Contratos y Licitaciones</div>
 </div>
 {% if error == 'inactivo' %}<p class="n-critica" style="text-align:center">Usuario inactivo. Contacta al administrador.</p>
+{% elif error == 'bloqueado' %}<p class="n-critica" style="text-align:center">Demasiados intentos fallidos. Intenta de nuevo en {{ minutos }} minuto(s).</p>
 {% elif error %}<p class="n-critica" style="text-align:center">Credenciales inválidas.</p>{% endif %}
 <form method="post" action="/login" class="filtros login-form" style="flex-direction:column;align-items:stretch">
   {% if siguiente %}<input type="hidden" name="siguiente" value="{{ siguiente }}">{% endif %}

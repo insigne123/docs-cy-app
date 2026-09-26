@@ -39,7 +39,14 @@ from app.models.contrato import Contrato, Garantia, Hito, Multa
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
-from app.services.auth import crear_token, hash_password, verify_password
+from app.services.auth import (
+    crear_token,
+    esta_bloqueado,
+    hash_password,
+    registrar_intento_exitoso,
+    registrar_intento_fallido,
+    verify_password,
+)
 from app.services.consultas import ficha_contrato, ficha_licitacion
 from app.services.contratos import calcular_requiere_gerencia, crear_contrato, generar_codigo
 from app.services.dashboard import (
@@ -58,7 +65,8 @@ from app.services.licitaciones import (
     listar_activas as listar_licitaciones_activas,
 )
 from app.services.metricas import metricas_proceso
-from app.services.reportes import generar_reporte_mensual
+from app.services.tareas import tareas_pendientes
+from app.services.reportes import MEDIA, generar_reporte_mensual, listado_contratos_xlsx
 from app.state_machine import ErrorTransicion, MotorEstados
 from app.state_machine.transitions import transiciones_disponibles, transiciones_disponibles_licitacion
 
@@ -275,6 +283,23 @@ def panel_listado_contratos(request: Request, filtros: dict = Depends(filtros_pa
     )
 
 
+@router.get("/panel/contratos/exportar", include_in_schema=False)
+def exportar_listado_contratos(request: Request, filtros: dict = Depends(filtros_panel), db: Session = Depends(get_db)):
+    """XLSX del Listado de contratos con los mismos filtros que están puestos
+    en pantalla (a diferencia de /panel/reporte, que es siempre el corte de
+    un mes)."""
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    if (r := _bloquear_modulo(request.state.usuario, _SIN_TABLERO_NI_LISTADO, "/panel/contratos/nuevo", "el Listado de contratos")) is not None:
+        return r
+    contenido = listado_contratos_xlsx(listar_contratos(db, **filtros))
+    return Response(
+        content=contenido,
+        media_type=MEDIA["xlsx"],
+        headers={"Content-Disposition": f'attachment; filename="listado_contratos_{date.today().isoformat()}.xlsx"'},
+    )
+
+
 @router.get("/panel/vigencias", response_class=HTMLResponse, include_in_schema=False)
 def panel_vigencias(request: Request, db: Session = Depends(get_db)):
     """Módulo de Gestión de Vigencias: contratos vigentes ordenados por urgencia,
@@ -310,6 +335,25 @@ def panel_alertas(request: Request, db: Session = Depends(get_db)):
         request=request,
         name="alertas.html",
         context={"alertas": calcular_alertas(db), "resumen": resumen_alertas(db)},
+        headers=SIN_CACHE,
+    )
+
+
+@router.get("/panel/tareas", response_class=HTMLResponse, include_in_schema=False)
+def panel_tareas(request: Request, db: Session = Depends(get_db)):
+    """Bandeja personal: a diferencia del Tablero (que algunos roles no ven),
+    esto siempre muestra solo lo que el usuario logueado puede accionar ahora
+    mismo según su rol y el estado actual — disponible para todos los roles,
+    sin las restricciones de navegación de _bloquear_modulo. Exige sesión
+    aunque AUTH_REQUIRED esté apagado: sin un usuario concreto no hay 'mis'
+    tareas que calcular."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    return templates.TemplateResponse(
+        request=request,
+        name="mis_tareas.html",
+        context={"tareas": tareas_pendientes(db, usuario)},
         headers=SIN_CACHE,
     )
 
@@ -1275,9 +1319,14 @@ def descargar_reporte(
 
 
 @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
-def login_form(request: Request, error: Optional[str] = None, siguiente: Optional[str] = None):
+def login_form(
+    request: Request, error: Optional[str] = None, siguiente: Optional[str] = None,
+    minutos: Optional[int] = None,
+):
     return templates.TemplateResponse(
-        request=request, name="login.html", context={"error": error, "siguiente": siguiente}
+        request=request,
+        name="login.html",
+        context={"error": error, "siguiente": siguiente, "minutos": minutos},
     )
 
 
@@ -1292,10 +1341,18 @@ def login_submit(
     destino = siguiente if siguiente and siguiente.startswith("/") else None
     email = email.strip().lower()
     usuario = db.scalars(select(Usuario).where(Usuario.email == email)).first()
+    siguiente_qs = quote(destino or '/panel', safe='')
+    if usuario is not None and (minutos := esta_bloqueado(usuario)) is not None:
+        return RedirectResponse(url=f"/login?error=bloqueado&minutos={minutos}&siguiente={siguiente_qs}", status_code=303)
     if usuario is None or not verify_password(password, usuario.password_hash):
-        return RedirectResponse(url=f"/login?error=1&siguiente={quote(destino or '/panel', safe='')}", status_code=303)
+        if usuario is not None:
+            registrar_intento_fallido(usuario)
+            db.commit()
+        return RedirectResponse(url=f"/login?error=1&siguiente={siguiente_qs}", status_code=303)
     if not usuario.activo:
-        return RedirectResponse(url=f"/login?error=inactivo&siguiente={quote(destino or '/panel', safe='')}", status_code=303)
+        return RedirectResponse(url=f"/login?error=inactivo&siguiente={siguiente_qs}", status_code=303)
+    registrar_intento_exitoso(usuario)
+    db.commit()
     # Sin 'siguiente' explícito (login normal, no un redirect-back tras un 303): la
     # página de aterrizaje depende del rol, porque Unidad Solicitante y Jefatura no
     # tienen acceso al Tablero (ver _bloquear_modulo).

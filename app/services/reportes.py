@@ -249,6 +249,33 @@ def reporte_pdf(datos: dict) -> bytes:
     return bytes(salida)
 
 
+def listado_contratos_xlsx(filas: list[dict]) -> bytes:
+    """Exporta el Listado de contratos tal como quedó filtrado en pantalla
+    (a diferencia de reporte_xlsx, que es siempre el corte de un mes)."""
+    from openpyxl import Workbook
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Contratos"
+    ws.append([
+        "Código", "Objeto", "Contraparte", "Unidad", "Administrador", "Flujo", "Estado",
+        "Inicio vigencia", "Fin vigencia", "Monto", "Moneda", "Días", "Semáforo",
+    ])
+    for c in filas:
+        ws.append([_celda(v) for v in (
+            c["codigo"], c["objeto"], c["contraparte"], c["unidad"], c["administrador"],
+            c["linea_nombre"], c["estado"],
+            c["fecha_inicio_vigencia"].isoformat() if c["fecha_inicio_vigencia"] else "",
+            c["fecha_fin_vigencia"].isoformat() if c["fecha_fin_vigencia"] else
+                ("indefinida" if c["vigencia_indefinida"] else ""),
+            c["monto"], c["moneda"], c["dias_para_vencer"], c["semaforo"],
+        )])
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    return buf.getvalue()
+
+
 def generar_reporte_mensual(
     session: Session, anio: int, mes: int, formato: str = "xlsx"
 ) -> tuple[bytes, str, str]:

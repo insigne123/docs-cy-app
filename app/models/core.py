@@ -1,10 +1,21 @@
 """Modelos base de organización y catálogos."""
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime
 from typing import Optional
 
-from sqlalchemy import Boolean, Date, ForeignKey, Integer, JSON, LargeBinary, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    ForeignKey,
+    Integer,
+    JSON,
+    LargeBinary,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.enums import ContraparteTipo, Rol, UnidadTipo
@@ -32,6 +43,10 @@ class Usuario(Base, TimestampMixin):
     unidad_id: Mapped[Optional[int]] = mapped_column(ForeignKey("unidad.id"), nullable=True)
     activo: Mapped[bool] = mapped_column(Boolean, default=True)
     password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    # Bloqueo temporal tras varios intentos de login fallidos seguidos (ver
+    # app/services/auth.py: registrar_intento_fallido/esta_bloqueado).
+    intentos_fallidos: Mapped[int] = mapped_column(Integer, default=0)
+    bloqueado_hasta: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
 
 
 class Contraparte(Base, TimestampMixin):
