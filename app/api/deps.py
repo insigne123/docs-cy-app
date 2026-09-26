@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.config import settings
 from app.database import SessionLocal
+from app.enums import Rol
 from app.models.core import Usuario
 from app.services.auth import leer_token
 
@@ -69,6 +70,29 @@ def exigir_admin_sistema(usuario: Optional[Usuario] = Depends(usuario_actual)) -
     if usuario is None or usuario.rol.value != "admin_sistema":
         raise HTTPException(status_code=403, detail="Se requiere el rol admin_sistema")
     return usuario
+
+
+def exigir_roles(*roles: Rol):
+    """Fábrica de dependencia para los sub-recursos de contrato/licitación que
+    en el panel web ya están limitados a roles concretos (garantías, hitos,
+    multas) pero cuyo endpoint de API no pasa por el motor de estados —
+    resolver_actor_transicion() no los cubre porque no son transiciones.
+    admin_sistema siempre puede, igual que en el panel (_requiere_rol)."""
+    nombres_permitidos = {r.value for r in roles}
+
+    def _dep(usuario: Optional[Usuario] = Depends(usuario_actual)) -> Optional[Usuario]:
+        if not settings.auth_required:
+            return usuario
+        if usuario is None:
+            raise HTTPException(status_code=401, detail="Autenticación requerida")
+        if usuario.rol.value not in nombres_permitidos and usuario.rol.value != "admin_sistema":
+            raise HTTPException(
+                status_code=403,
+                detail=f"Se requiere uno de estos roles: {', '.join(sorted(nombres_permitidos))}",
+            )
+        return usuario
+
+    return _dep
 
 
 def resolver_actor_transicion(

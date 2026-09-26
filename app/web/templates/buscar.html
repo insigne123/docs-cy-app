@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Buscar · Panel de Contratos{% endblock %}
+{% block body %}
+<h1>Buscar</h1>
+<div class="sub">Busca por código, objeto o nombre de la contraparte.</div>
+
+<form method="get" action="/panel/buscar" class="filtros" style="margin-bottom:18px">
+  <label style="flex:1 1 auto">Búsqueda
+    <input type="search" name="q" value="{{ resultado.q }}" placeholder="Ej: CT-2026-0004, aseo, Yago Spa" style="width:100%" autofocus>
+  </label>
+  <button class="btn" type="submit">Buscar</button>
+</form>
+
+{% if not resultado.q %}
+  <div class="empty">Escribe algo para buscar.</div>
+{% elif not resultado.contratos and not resultado.licitaciones %}
+  <div class="empty">Sin resultados para "{{ resultado.q }}".</div>
+{% endif %}
+
+{% if resultado.contratos %}
+<section>
+  <h2>Contratos <span class="muted">({{ resultado.contratos|length }})</span></h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Código</th><th>Objeto</th><th>Contraparte</th><th>Flujo</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for c in resultado.contratos %}
+        <tr>
+          <td><a href="/panel/contratos/{{ c.id }}">{{ c.codigo }}</a></td>
+          <td class="obj">{{ c.objeto }}</td>
+          <td>{{ c.contraparte or '—' }}</td>
+          <td><span class="badge l-{{ c.linea }}">{{ c.linea_nombre }}</span></td>
+          <td>{{ c.estado.replace('_',' ') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+
+{% if resultado.licitaciones %}
+<section>
+  <h2>Licitaciones <span class="muted">({{ resultado.licitaciones|length }})</span></h2>
+  <div class="tabla-scroll">
+    <table>
+      <thead><tr><th>Código</th><th>Objeto</th><th>Estado</th></tr></thead>
+      <tbody>
+      {% for l in resultado.licitaciones %}
+        <tr>
+          <td><a href="/panel/licitaciones/{{ l.id }}">{{ l.codigo }}</a></td>
+          <td class="obj">{{ l.objeto }}</td>
+          <td>{{ l.estado.replace('_',' ') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

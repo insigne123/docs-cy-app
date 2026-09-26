@@ -166,6 +166,42 @@ def test_login_api_se_bloquea_tras_intentos_fallidos(api, session, usuarios):
     assert r.status_code == 429
 
 
+def test_subrecursos_api_exigen_rol_correcto(api, session, usuarios, unidad, contraparte, monkeypatch):
+    """Los sub-recursos de contrato (garantías, hitos, multas) no pasan por el
+    motor de estados, asi que resolver_actor_transicion no los cubre: sin un
+    chequeo propio, cualquier usuario autenticado podia agregarlos aunque el
+    panel web se lo reserve a un rol especifico (Financiera para garantias,
+    por ejemplo)."""
+    from app.config import settings
+    from app.services.auth import hash_password
+
+    r = api.post("/contratos", json={
+        "codigo": "CT-SUBREC", "linea": "A_regular", "objeto": "x",
+        "unidad_solicitante_id": unidad.id, "solicitante_id": usuarios[Rol.unidad_solicitante].id,
+        "contraparte_id": contraparte.id,
+    })
+    cid = r.json()["id"]
+
+    solicitante = usuarios[Rol.unidad_solicitante]
+    solicitante.password_hash = hash_password("clave-sol-1")
+    financiera = usuarios[Rol.financiera]
+    financiera.password_hash = hash_password("clave-fin-1")
+    session.commit()
+
+    monkeypatch.setattr(settings, "auth_required", True)
+    tok_sol = api.post("/auth/login", json={"email": solicitante.email, "password": "clave-sol-1"}).json()["token"]
+    tok_fin = api.post("/auth/login", json={"email": financiera.email, "password": "clave-fin-1"}).json()["token"]
+
+    cuerpo_garantia = {
+        "tipo": "fiel_cumplimiento", "instrumento": "boleta_bancaria", "monto": 100,
+        "moneda": "CLP", "fecha_emision": "2026-01-01", "fecha_vencimiento": "2027-01-01",
+    }
+    r = api.post(f"/contratos/{cid}/garantias", json=cuerpo_garantia, headers={"Authorization": f"Bearer {tok_sol}"})
+    assert r.status_code == 403
+    r = api.post(f"/contratos/{cid}/garantias", json=cuerpo_garantia, headers={"Authorization": f"Bearer {tok_fin}"})
+    assert r.status_code == 201
+
+
 def test_crear_usuario_con_password(api):
     r = api.post(
         "/usuarios",
@@ -174,6 +210,29 @@ def test_crear_usuario_con_password(api):
     assert r.status_code == 201
     tok = api.post("/auth/login", json={"email": "ana@empresa.cl", "password": "hola12345"}).json()
     assert "token" in tok
+
+
+def test_password_minima_al_crear_usuario(api, usuarios, session):
+    from app.models.core import Usuario
+    from app.services.auth import hash_password
+    from sqlalchemy import select
+
+    r = api.post(
+        "/usuarios",
+        json={"nombre": "Corta", "email": "corta@empresa.cl", "rol": "legal", "password": "1234567"},
+    )
+    assert r.status_code == 422
+
+    admin = usuarios[Rol.admin_sistema]
+    admin.password_hash = hash_password("clave-admin-2")
+    session.commit()
+    api.post("/login", data={"email": admin.email, "password": "clave-admin-2"})
+
+    r = api.post("/panel/catalogos/usuarios", data={
+        "nombre": "Corta Web", "email": "cortaweb@empresa.cl", "rol": "legal", "password": "1234567",
+    }, follow_redirects=False)
+    assert r.status_code == 303 and "error=" in r.headers["location"]
+    assert session.scalars(select(Usuario).where(Usuario.email == "cortaweb@empresa.cl")).first() is None
 
 
 def test_login_web_cookie_y_email_normalizado(session):

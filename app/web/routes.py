@@ -39,12 +39,14 @@ from app.models.contrato import Contrato, Garantia, Hito, Multa
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
+from app.services.busqueda import buscar_global
 from app.services.auth import (
     crear_token,
     esta_bloqueado,
     hash_password,
     registrar_intento_exitoso,
     registrar_intento_fallido,
+    validar_password,
     verify_password,
 )
 from app.services.consultas import ficha_contrato, ficha_licitacion
@@ -335,6 +337,20 @@ def panel_alertas(request: Request, db: Session = Depends(get_db)):
         request=request,
         name="alertas.html",
         context={"alertas": calcular_alertas(db), "resumen": resumen_alertas(db)},
+        headers=SIN_CACHE,
+    )
+
+
+@router.get("/panel/buscar", response_class=HTMLResponse, include_in_schema=False)
+def panel_buscar(request: Request, q: str = "", db: Session = Depends(get_db)):
+    if (r := _requiere_login(request, db)) is not None:
+        return r
+    if (r := _bloquear_modulo(request.state.usuario, _SIN_TABLERO_NI_LISTADO, "/panel/contratos/nuevo", "la búsqueda")) is not None:
+        return r
+    return templates.TemplateResponse(
+        request=request,
+        name="buscar.html",
+        context={"resultado": buscar_global(db, q)},
         headers=SIN_CACHE,
     )
 
@@ -1078,6 +1094,8 @@ def crear_usuario_submit(
         return r
     if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
         return r
+    if password and (error_password := validar_password(password)) is not None:
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg(error_password)}", status_code=303)
     try:
         nuevo = Usuario(
             nombre=nombre.strip(), email=email.strip().lower(), rol=Rol(rol),
@@ -1129,6 +1147,19 @@ def eliminar_unidad_submit(uid: int, request: Request, db: Session = Depends(get
     unidad.activo = False
     db.commit()
     return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Unidad desactivada')}", status_code=303)
+
+
+@router.post("/panel/catalogos/unidades/{uid}/reactivar", include_in_schema=False)
+def reactivar_unidad_submit(uid: int, request: Request, db: Session = Depends(get_db)):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    unidad = obtener_o_404(db, Unidad, uid, "Unidad")
+    unidad.activo = True
+    db.commit()
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Unidad reactivada')}", status_code=303)
 
 
 @router.post("/panel/catalogos/contrapartes/{cid}/editar", include_in_schema=False)
@@ -1231,6 +1262,19 @@ def eliminar_formato_submit(fid: int, request: Request, db: Session = Depends(ge
     return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Formato desactivado')}", status_code=303)
 
 
+@router.post("/panel/catalogos/formatos/{fid}/reactivar", include_in_schema=False)
+def reactivar_formato_submit(fid: int, request: Request, db: Session = Depends(get_db)):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    formato = obtener_o_404(db, FormatoEstandar, fid, "Formato")
+    formato.vigente = True
+    db.commit()
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Formato reactivado')}", status_code=303)
+
+
 @router.get("/panel/catalogos/formatos/{fid}/plantilla", include_in_schema=False)
 def previsualizar_formato(fid: int, request: Request, db: Session = Depends(get_db)):
     """Sirve el archivo de la plantilla tal como se subió, para que cualquier
@@ -1264,6 +1308,8 @@ def editar_usuario_submit(
         return r
     if uid == usuario.id and not activo:
         return RedirectResponse(url=f"/panel/catalogos?error={_msg('No puedes desactivar tu propia cuenta')}", status_code=303)
+    if password and (error_password := validar_password(password)) is not None:
+        return RedirectResponse(url=f"/panel/catalogos?error={_msg(error_password)}", status_code=303)
     objetivo = obtener_o_404(db, Usuario, uid, "Usuario")
     try:
         objetivo.nombre = nombre.strip()
@@ -1295,6 +1341,19 @@ def eliminar_usuario_submit(uid: int, request: Request, db: Session = Depends(ge
     objetivo.activo = False
     db.commit()
     return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Usuario desactivado')}", status_code=303)
+
+
+@router.post("/panel/catalogos/usuarios/{uid}/reactivar", include_in_schema=False)
+def reactivar_usuario_submit(uid: int, request: Request, db: Session = Depends(get_db)):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel/catalogos", Rol.admin_sistema)) is not None:
+        return r
+    objetivo = obtener_o_404(db, Usuario, uid, "Usuario")
+    objetivo.activo = True
+    db.commit()
+    return RedirectResponse(url=f"/panel/catalogos?ok={_msg('Usuario reactivado')}", status_code=303)
 
 
 @router.get("/panel/reporte", include_in_schema=False)

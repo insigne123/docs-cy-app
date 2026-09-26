@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, obtener_o_404, resolver_actor_transicion, usuario_actual
+from app.api.deps import exigir_roles, get_db, obtener_o_404, resolver_actor_transicion, usuario_actual
 from app.api.schemas import (
     ContratoIn,
     ContratoOut,
@@ -24,7 +24,7 @@ from app.api.schemas import (
     MultaOut,
     TransicionIn,
 )
-from app.enums import EstadoContrato, LineaContrato
+from app.enums import EstadoContrato, LineaContrato, Rol
 from app.models.contrato import Contrato, Documento, Garantia, Hito, Multa
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.services.consultas import ficha_contrato as _ficha
@@ -176,7 +176,10 @@ def historial(cid: int, db: Session = Depends(get_db)):
 
 
 @router.post("/{cid}/garantias", response_model=GarantiaOut, status_code=201)
-def agregar_garantia(cid: int, payload: GarantiaIn, db: Session = Depends(get_db)):
+def agregar_garantia(
+    cid: int, payload: GarantiaIn, db: Session = Depends(get_db),
+    _=Depends(exigir_roles(Rol.financiera)),
+):
     obtener_o_404(db, Contrato, cid, "Contrato")
     g = Garantia(entidad_tipo="contrato", entidad_id=cid, **payload.model_dump())
     db.add(g)
@@ -186,7 +189,10 @@ def agregar_garantia(cid: int, payload: GarantiaIn, db: Session = Depends(get_db
 
 
 @router.post("/{cid}/hitos", response_model=HitoOut, status_code=201)
-def agregar_hito(cid: int, payload: HitoIn, db: Session = Depends(get_db)):
+def agregar_hito(
+    cid: int, payload: HitoIn, db: Session = Depends(get_db),
+    _=Depends(exigir_roles(Rol.tecnica, Rol.admin_contratos)),
+):
     obtener_o_404(db, Contrato, cid, "Contrato")
     h = Hito(contrato_id=cid, **payload.model_dump())
     db.add(h)
@@ -196,7 +202,10 @@ def agregar_hito(cid: int, payload: HitoIn, db: Session = Depends(get_db)):
 
 
 @router.post("/{cid}/multas", response_model=MultaOut, status_code=201)
-def agregar_multa(cid: int, payload: MultaIn, db: Session = Depends(get_db)):
+def agregar_multa(
+    cid: int, payload: MultaIn, db: Session = Depends(get_db),
+    _=Depends(exigir_roles(Rol.financiera, Rol.admin_contratos)),
+):
     obtener_o_404(db, Contrato, cid, "Contrato")
     m = Multa(contrato_id=cid, **payload.model_dump())
     db.add(m)

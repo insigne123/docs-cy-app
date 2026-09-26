@@ -22,6 +22,14 @@ MAX_INTENTOS_LOGIN = 5
 BLOQUEO_LOGIN_MINUTOS = 15
 
 
+def validar_password(password: str) -> Optional[str]:
+    """Política mínima de contraseñas. None si es válida, o el mensaje de
+    error a mostrar si no lo es."""
+    if len(password) < 8:
+        return "La contraseña debe tener al menos 8 caracteres"
+    return None
+
+
 def hash_password(password: str, *, salt: Optional[bytes] = None, rounds: int = _ROUNDS) -> str:
     salt = salt or os.urandom(16)
     dk = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, rounds)

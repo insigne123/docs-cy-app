@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, obtener_o_404, resolver_actor_transicion, usuario_actual
+from app.api.deps import exigir_roles, get_db, obtener_o_404, resolver_actor_transicion, usuario_actual
 from app.api.schemas import (
     AdjudicarIn,
     ContratoOut,
@@ -19,7 +19,7 @@ from app.api.schemas import (
     LicitacionUpdate,
     TransicionLicitacionIn,
 )
-from app.enums import EstadoLicitacion
+from app.enums import EstadoLicitacion, Rol
 from app.models.contrato import Garantia
 from app.models.core import Contraparte, Unidad, Usuario
 from app.models.licitacion import Licitacion
@@ -133,7 +133,10 @@ def adjudicar(
 
 
 @router.post("/{lid}/garantias", response_model=GarantiaOut, status_code=201)
-def agregar_garantia(lid: int, payload: GarantiaIn, db: Session = Depends(get_db)):
+def agregar_garantia(
+    lid: int, payload: GarantiaIn, db: Session = Depends(get_db),
+    _=Depends(exigir_roles(Rol.financiera)),
+):
     obtener_o_404(db, Licitacion, lid, "Licitación")
     g = Garantia(entidad_tipo="licitacion", entidad_id=lid, **payload.model_dump())
     db.add(g)

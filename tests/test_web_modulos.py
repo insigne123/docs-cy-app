@@ -522,6 +522,14 @@ def test_editar_y_eliminar_unidad(api, session, usuarios, unidad):
     r = api.get("/panel/catalogos")
     assert "Operaciones Renombrada" in r.text
 
+    # Botón de reactivar en un clic (sin volver a pasar por el formulario de editar).
+    r = api.post(f"/panel/catalogos/unidades/{unidad.id}/reactivar", follow_redirects=False)
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(unidad)
+    assert unidad.activo is True
+    r = api.get("/panel/contratos/nuevo")
+    assert "Operaciones Renombrada" in r.text
+
 
 def test_editar_y_eliminar_contraparte(api, session, usuarios, contraparte):
     _login(api, session, usuarios, rol=Rol.admin_sistema)
@@ -577,6 +585,11 @@ def test_editar_y_eliminar_formato(api, session, usuarios, formato):
     session.refresh(formato)
     assert formato.vigente is False
 
+    r = api.post(f"/panel/catalogos/formatos/{formato.id}/reactivar", follow_redirects=False)
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(formato)
+    assert formato.vigente is True
+
 
 def test_editar_y_eliminar_usuario(api, session, usuarios):
     admin = _login(api, session, usuarios, rol=Rol.admin_sistema)
@@ -600,6 +613,11 @@ def test_editar_y_eliminar_usuario(api, session, usuarios):
     assert r.status_code == 303 and "error=" in r.headers["location"]
     session.refresh(admin)
     assert admin.activo is True
+
+    r = api.post(f"/panel/catalogos/usuarios/{objetivo.id}/reactivar", follow_redirects=False)
+    assert r.status_code == 303 and "ok=" in r.headers["location"]
+    session.refresh(objetivo)
+    assert objetivo.activo is True
 
 
 def test_navegacion_unidad_solicitante_solo_solicitudes_y_licitaciones(api, session, usuarios):

@@ -20,7 +20,7 @@ from app.api.schemas import (
     UsuarioOut,
 )
 from app.models.core import Contraparte, FormatoEstandar, Parametro, Unidad, Usuario
-from app.services.auth import hash_password
+from app.services.auth import hash_password, validar_password
 from app.services.formatos import verificar_formato
 
 router = APIRouter(tags=["catálogos"])
@@ -60,6 +60,8 @@ def crear_usuario(payload: UsuarioIn, db: Session = Depends(get_db), _=Depends(e
     if datos.get("email"):
         datos["email"] = datos["email"].strip().lower()
     clave = datos.pop("password", None)
+    if clave and (error_password := validar_password(clave)) is not None:
+        raise HTTPException(status_code=422, detail=error_password)
     usuario = Usuario(**datos)
     if clave:
         usuario.password_hash = hash_password(clave)

@@ -165,6 +165,13 @@
         <button type="button" class="sidebar-toggle" id="sidebar-toggle" title="Ocultar menú">&#10094;</button>
       </div>
       {% set _sin_tablero = _u and _u.rol.value in ('unidad_solicitante', 'jefatura') %}
+      {% if _u and not _sin_tablero %}
+      <form method="get" action="/panel/buscar" style="margin:0 4px 12px">
+        <input type="search" name="q" placeholder="Buscar…"
+          value="{{ request.query_params.get('q', '') if request.url.path == '/panel/buscar' else '' }}"
+          style="width:100%;padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12.5px;font-family:inherit">
+      </form>
+      {% endif %}
       <nav>
         {% if _u %}
         <a href="/panel/tareas" class="{{ 'active' if request.url.path == '/panel/tareas' }}">
