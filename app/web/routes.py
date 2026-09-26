@@ -39,6 +39,7 @@ from app.models.contrato import Contrato, Garantia, Hito, Multa
 from app.models.core import Contraparte, FormatoEstandar, Unidad, Usuario
 from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
+from app.services.auditoria import historial_global
 from app.services.busqueda import buscar_global
 from app.services.auth import (
     crear_token,
@@ -351,6 +352,32 @@ def panel_buscar(request: Request, q: str = "", db: Session = Depends(get_db)):
         request=request,
         name="buscar.html",
         context={"resultado": buscar_global(db, q)},
+        headers=SIN_CACHE,
+    )
+
+
+@router.get("/panel/auditoria", response_class=HTMLResponse, include_in_schema=False)
+def panel_auditoria(
+    request: Request, db: Session = Depends(get_db),
+    usuario_id: Optional[int] = None, entidad_tipo: Optional[str] = None,
+):
+    """Registro de auditoría a nivel sistema (no solo la línea de tiempo de
+    una ficha individual): exclusivo de admin_sistema, igual que el resto de
+    Administración."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    if (r := _requiere_rol(usuario, "/panel", Rol.admin_sistema)) is not None:
+        return r
+    return templates.TemplateResponse(
+        request=request,
+        name="auditoria.html",
+        context={
+            "eventos": historial_global(db, usuario_id=usuario_id, entidad_tipo=entidad_tipo),
+            "usuarios_filtro": list(db.scalars(select(Usuario).order_by(Usuario.nombre))),
+            "filtro_usuario_id": usuario_id,
+            "filtro_entidad_tipo": entidad_tipo,
+        },
         headers=SIN_CACHE,
     )
 
