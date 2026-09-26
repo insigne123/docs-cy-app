@@ -236,6 +236,7 @@ def panel(
     if (r := _bloquear_modulo(request.state.usuario, _SIN_TABLERO_NI_LISTADO, "/panel/contratos/nuevo", "el Tablero")) is not None:
         return r
     datos = construir_dashboard(db, **filtros)
+    activas = listar_licitaciones_activas(db)
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -244,7 +245,8 @@ def panel(
             "opciones": opciones_filtros(db),
             "filtros": filtros,
             "alertas": resumen_alertas(db),
-            "licitaciones_activas": listar_licitaciones_activas(db)[:8],
+            "licitaciones_activas": activas[:8],
+            "licitaciones_activas_total": len(activas),
             "licitaciones_conteo": contar_resumen_licitaciones(db),
             "error": error,
         },

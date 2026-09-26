@@ -55,3 +55,38 @@ def guardia(usuario: Optional[Usuario] = Depends(usuario_actual)) -> Optional[Us
     if settings.auth_required and usuario is None:
         raise HTTPException(status_code=401, detail="Autenticación requerida")
     return usuario
+
+
+def exigir_admin_sistema(usuario: Optional[Usuario] = Depends(usuario_actual)) -> Optional[Usuario]:
+    """Para endpoints de catálogos (unidades, usuarios, contrapartes, formatos,
+    parámetros) que en el panel web ya son exclusivos de admin_sistema — sin
+    esto, cualquier usuario autenticado podía llamar la API directamente y
+    saltarse esa restricción (p. ej. crearse a sí mismo una cuenta admin).
+    Sin `settings.auth_required` (uso interno/pruebas) no se restringe nada,
+    igual que el resto de la API."""
+    if not settings.auth_required:
+        return usuario
+    if usuario is None or usuario.rol.value != "admin_sistema":
+        raise HTTPException(status_code=403, detail="Se requiere el rol admin_sistema")
+    return usuario
+
+
+def resolver_actor_transicion(
+    db: Session,
+    payload_usuario_id: int,
+    payload_rol,
+    sesion_usuario: Optional[Usuario],
+):
+    """Determina qué usuario y rol usa el motor de estados para autorizar una
+    transición. Con auth obligatoria, la identidad SIEMPRE viene de la sesión
+    autenticada, nunca del cuerpo de la solicitud: de lo contrario cualquier
+    llamada autenticada podía indicar un usuario_id/rol arbitrario en el JSON
+    y suplantar a otra persona (p. ej. actuar como admin_sistema sin serlo).
+    Sin auth obligatoria (uso interno/pruebas) se mantiene el comportamiento
+    histórico de confiar en el payload."""
+    if settings.auth_required:
+        if sesion_usuario is None:
+            raise HTTPException(status_code=401, detail="Autenticación requerida")
+        return sesion_usuario, None
+    usuario = obtener_o_404(db, Usuario, payload_usuario_id, "Usuario")
+    return usuario, payload_rol

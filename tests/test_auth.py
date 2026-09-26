@@ -53,6 +53,78 @@ def test_login_y_proteccion(api, session, usuarios, unidad, contraparte, monkeyp
     assert r.status_code == 401 and r.json()["detail"] == "Autenticación requerida"
 
 
+def test_catalogos_api_exigen_admin_sistema_con_auth(api, usuarios, monkeypatch):
+    """La API de catálogos no tenía ningún chequeo de rol propio: cualquier
+    usuario autenticado (de cualquier rol) podía llamarla directo y saltarse
+    la restricción a admin_sistema que sí aplica el panel web — p. ej.
+    crearse a sí mismo una cuenta con más privilegios."""
+    from app.config import settings
+    from app.services.auth import hash_password
+
+    legal = usuarios[Rol.legal]
+    legal.password_hash = hash_password("clave-legal-1")
+    admin = usuarios[Rol.admin_sistema]
+    admin.password_hash = hash_password("clave-admin-1")
+
+    monkeypatch.setattr(settings, "auth_required", True)
+    tok_legal = api.post("/auth/login", json={"email": legal.email, "password": "clave-legal-1"}).json()["token"]
+    tok_admin = api.post("/auth/login", json={"email": admin.email, "password": "clave-admin-1"}).json()["token"]
+
+    cuerpo_unidad = {"nombre": "Unidad API Test", "tipo": "interna"}
+    r = api.post("/unidades", json=cuerpo_unidad, headers={"Authorization": f"Bearer {tok_legal}"})
+    assert r.status_code == 403
+    r = api.post("/unidades", json=cuerpo_unidad, headers={"Authorization": f"Bearer {tok_admin}"})
+    assert r.status_code == 201
+
+    cuerpo_usuario = {"nombre": "Otro", "email": "otro-api@empresa.cl", "rol": "admin_sistema"}
+    assert api.post("/usuarios", json=cuerpo_usuario, headers={"Authorization": f"Bearer {tok_legal}"}).status_code == 403
+
+
+def test_transicion_api_usa_identidad_de_sesion_no_del_payload(api, session, usuarios, unidad, contraparte, monkeypatch):
+    """Antes, /contratos/{id}/transiciones tomaba usuario_id (y hasta el rol)
+    directo del cuerpo JSON: cualquiera autenticado podia indicar el id de
+    otro usuario -o directamente el rol que quisiera- y actuar en su nombre.
+    Con auth obligatoria, el actor real siempre debe salir de la sesión."""
+    from app.config import settings
+    from app.services.auth import hash_password
+
+    solicitante = usuarios[Rol.unidad_solicitante]
+    solicitante.password_hash = hash_password("clave-sol-1")
+    legal = usuarios[Rol.legal]
+    session.commit()
+
+    r = api.post("/contratos", json={
+        "codigo": "CT-IMPERSONAR", "linea": "A_regular", "objeto": "x",
+        "unidad_solicitante_id": unidad.id, "solicitante_id": solicitante.id,
+        "contraparte_id": contraparte.id,
+    })
+    assert r.status_code == 201
+    cid = r.json()["id"]
+
+    monkeypatch.setattr(settings, "auth_required", True)
+    tok = api.post("/auth/login", json={"email": solicitante.email, "password": "clave-sol-1"}).json()["token"]
+    cab = {"Authorization": f"Bearer {tok}"}
+
+    # Unidad Solicitante sí puede avanzar ingreso -> aprobacion_jefatura (A2)...
+    r = api.post(
+        f"/contratos/{cid}/transiciones",
+        json={"hacia": "aprobacion_jefatura", "usuario_id": legal.id, "rol": "legal"},
+        headers=cab,
+    )
+    assert r.status_code == 200
+
+    # ...pero aprobacion_jefatura -> admisibilidad_1 (A5) es exclusiva de
+    # Jefatura. El payload dice usuario_id=legal.id y rol=legal (que sí
+    # podría ejecutarla), y aun así debe fallar con 403: la sesión real
+    # sigue siendo Unidad Solicitante, y eso es lo único que debe importar.
+    r = api.post(
+        f"/contratos/{cid}/transiciones",
+        json={"hacia": "admisibilidad_1", "usuario_id": legal.id, "rol": "legal"},
+        headers=cab,
+    )
+    assert r.status_code == 403
+
+
 def test_crear_usuario_con_password(api):
     r = api.post(
         "/usuarios",

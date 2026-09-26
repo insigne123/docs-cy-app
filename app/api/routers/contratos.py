@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, obtener_o_404
+from app.api.deps import get_db, obtener_o_404, resolver_actor_transicion, usuario_actual
 from app.api.schemas import (
     ContratoIn,
     ContratoOut,
@@ -125,9 +125,12 @@ def actualizar(cid: int, payload: ContratoUpdate, db: Session = Depends(get_db))
 
 
 @router.post("/{cid}/transiciones", response_model=FichaContrato)
-def transicionar(cid: int, payload: TransicionIn, db: Session = Depends(get_db)):
+def transicionar(
+    cid: int, payload: TransicionIn, db: Session = Depends(get_db),
+    sesion_usuario: Optional[Usuario] = Depends(usuario_actual),
+):
     contrato = obtener_o_404(db, Contrato, cid, "Contrato")
-    usuario = obtener_o_404(db, Usuario, payload.usuario_id, "Usuario")
+    usuario, rol = resolver_actor_transicion(db, payload.usuario_id, payload.rol, sesion_usuario)
     try:
         hacia = EstadoContrato(payload.hacia)
         retorno_a = EstadoContrato(payload.retorno_a) if payload.retorno_a else None
@@ -145,7 +148,7 @@ def transicionar(cid: int, payload: TransicionIn, db: Session = Depends(get_db))
         contrato,
         hacia,
         usuario=usuario,
-        rol=payload.rol,
+        rol=rol,
         comentario=payload.comentario,
         retorno_a=retorno_a,
         extra=extra,

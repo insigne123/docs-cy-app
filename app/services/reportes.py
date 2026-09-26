@@ -76,6 +76,19 @@ def datos_reporte(session: Session, anio: int, mes: int, hoy: Optional[date] = N
     }
 
 
+_CARACTERES_FORMULA = ("=", "+", "-", "@", "\t", "\r")
+
+
+def _celda(v):
+    """Neutraliza la inyección de fórmulas de Excel/CSV (OWASP): un texto libre
+    ingresado por un usuario (objeto, contraparte, emisor de garantía, título
+    de alerta, etc.) que empiece con '=', '+', '-' o '@' se interpretaría como
+    fórmula al abrir el XLSX, no como texto plano."""
+    if isinstance(v, str) and v[:1] in _CARACTERES_FORMULA:
+        return "'" + v
+    return v
+
+
 # --------------------------------------------------------------------- XLSX
 def reporte_xlsx(datos: dict) -> bytes:
     from openpyxl import Workbook
@@ -108,7 +121,7 @@ def reporte_xlsx(datos: dict) -> bytes:
     for a in datos["alertas"]:
         filas.append([a["nivel"], a["tipo"], a["contrato_codigo"], a["titulo"]])
     for f in filas:
-        ws.append(f)
+        ws.append([_celda(v) for v in f])
 
     dcols = ["Código", "Flujo", "Estado", "Contraparte", "Unidad", "Administrador", "Monto",
              "Moneda", "Ingreso", "Firma", "Fin vigencia", "Días", "Semáforo"]
@@ -116,31 +129,31 @@ def reporte_xlsx(datos: dict) -> bytes:
         w = wb.create_sheet(nombre)
         w.append(dcols)
         for c in filas_c:
-            w.append([
+            w.append([_celda(v) for v in (
                 c["codigo"], c["linea_nombre"], c["estado"], c["contraparte"], c["unidad"],
                 c["administrador"], c["monto"], c["moneda"],
                 c["fecha_ingreso"].isoformat() if c["fecha_ingreso"] else "",
                 c["fecha_firma"].isoformat() if c["fecha_firma"] else "",
                 c["fecha_fin_vigencia"].isoformat() if c["fecha_fin_vigencia"] else "",
                 c["dias_para_vencer"], c["semaforo"],
-            ])
+            )])
 
     wa = wb.create_sheet("Alertas")
     wa.append(["Nivel", "Tipo", "Contrato", "Título", "Detalle", "Fecha ref.", "Días"])
     for a in datos["alertas"]:
-        wa.append([
+        wa.append([_celda(v) for v in (
             a["nivel"], a["tipo"], a["contrato_codigo"], a["titulo"], a["detalle"],
             a["fecha_referencia"].isoformat() if a["fecha_referencia"] else "", a["dias"],
-        ])
+        )])
 
     wg = wb.create_sheet("Garantias")
     wg.append(["Contrato", "Tipo", "Instrumento", "Emisor", "Monto", "Moneda", "Vencimiento",
                "Estado", "Días", "Clasificación"])
     for g in datos["garantias"]:
-        wg.append([
+        wg.append([_celda(v) for v in (
             g["contrato"], g["tipo"], g["instrumento"], g["emisor"], g["monto"], g["moneda"],
             g["fecha_vencimiento"].isoformat(), g["estado"], g["dias"], g["clasificacion"],
-        ])
+        )])
 
     buf = io.BytesIO()
     wb.save(buf)

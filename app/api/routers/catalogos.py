@@ -6,7 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, obtener_o_404
+from app.api.deps import exigir_admin_sistema, get_db, obtener_o_404
 from app.api.schemas import (
     ContraparteIn,
     ContraparteOut,
@@ -39,7 +39,7 @@ def _guardar(db: Session, obj):
 
 # ---------------- unidades
 @router.post("/unidades", response_model=UnidadOut, status_code=201)
-def crear_unidad(payload: UnidadIn, db: Session = Depends(get_db)):
+def crear_unidad(payload: UnidadIn, db: Session = Depends(get_db), _=Depends(exigir_admin_sistema)):
     return _guardar(db, Unidad(**payload.model_dump()))
 
 
@@ -55,7 +55,7 @@ def obtener_unidad(uid: int, db: Session = Depends(get_db)):
 
 # ---------------- usuarios
 @router.post("/usuarios", response_model=UsuarioOut, status_code=201)
-def crear_usuario(payload: UsuarioIn, db: Session = Depends(get_db)):
+def crear_usuario(payload: UsuarioIn, db: Session = Depends(get_db), _=Depends(exigir_admin_sistema)):
     datos = payload.model_dump()
     if datos.get("email"):
         datos["email"] = datos["email"].strip().lower()
@@ -78,7 +78,7 @@ def obtener_usuario(uid: int, db: Session = Depends(get_db)):
 
 # ---------------- contrapartes
 @router.post("/contrapartes", response_model=ContraparteOut, status_code=201)
-def crear_contraparte(payload: ContraparteIn, db: Session = Depends(get_db)):
+def crear_contraparte(payload: ContraparteIn, db: Session = Depends(get_db), _=Depends(exigir_admin_sistema)):
     return _guardar(db, Contraparte(**payload.model_dump()))
 
 
@@ -94,7 +94,7 @@ def obtener_contraparte(cid: int, db: Session = Depends(get_db)):
 
 # ---------------- formatos estándar (Línea B)
 @router.post("/formatos", response_model=FormatoOut, status_code=201)
-def crear_formato(payload: FormatoIn, db: Session = Depends(get_db)):
+def crear_formato(payload: FormatoIn, db: Session = Depends(get_db), _=Depends(exigir_admin_sistema)):
     return _guardar(db, FormatoEstandar(**payload.model_dump()))
 
 
@@ -122,7 +122,10 @@ def listar_parametros(db: Session = Depends(get_db)):
 
 
 @router.put("/parametros/{clave}", response_model=ParametroOut)
-def actualizar_parametro(clave: str, payload: ParametroUpdate, db: Session = Depends(get_db)):
+def actualizar_parametro(
+    clave: str, payload: ParametroUpdate, db: Session = Depends(get_db),
+    _=Depends(exigir_admin_sistema),
+):
     p = obtener_o_404(db, Parametro, clave, "Parámetro")
     p.valor = payload.valor
     db.commit()

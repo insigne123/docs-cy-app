@@ -106,7 +106,10 @@
 
 {% if licitaciones_activas %}
 <section>
-  <h2>Licitaciones en curso <span class="muted">({{ licitaciones_activas|length }})</span></h2>
+  <h2>Licitaciones en curso <span class="muted">({{ licitaciones_activas_total }})</span></h2>
+  {% if licitaciones_activas_total > licitaciones_activas|length %}
+  <p class="muted" style="font-size:11.5px;margin:-4px 0 6px">Mostrando las {{ licitaciones_activas|length }} más recientes.</p>
+  {% endif %}
   <div class="tabla-scroll">
     <table>
       <thead><tr><th>Código</th><th>Objeto</th><th>Estado</th><th>Ingreso</th></tr></thead>

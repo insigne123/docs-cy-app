@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db, obtener_o_404
+from app.api.deps import get_db, obtener_o_404, resolver_actor_transicion, usuario_actual
 from app.api.schemas import (
     AdjudicarIn,
     ContratoOut,
@@ -87,14 +87,17 @@ def actualizar(lid: int, payload: LicitacionUpdate, db: Session = Depends(get_db
 
 
 @router.post("/{lid}/transiciones", response_model=FichaLicitacion)
-def transicionar(lid: int, payload: TransicionLicitacionIn, db: Session = Depends(get_db)):
+def transicionar(
+    lid: int, payload: TransicionLicitacionIn, db: Session = Depends(get_db),
+    sesion_usuario: Optional[Usuario] = Depends(usuario_actual),
+):
     lic = obtener_o_404(db, Licitacion, lid, "Licitación")
-    usuario = obtener_o_404(db, Usuario, payload.usuario_id, "Usuario")
+    usuario, rol = resolver_actor_transicion(db, payload.usuario_id, payload.rol, sesion_usuario)
     MotorEstados(db).transicionar_licitacion(
         lic,
         payload.hacia,
         usuario=usuario,
-        rol=payload.rol,
+        rol=rol,
         comentario=payload.comentario,
         extra=dict(payload.extra or {}),
     )
@@ -104,9 +107,12 @@ def transicionar(lid: int, payload: TransicionLicitacionIn, db: Session = Depend
 
 
 @router.post("/{lid}/adjudicar", response_model=ContratoOut, status_code=201)
-def adjudicar(lid: int, payload: AdjudicarIn, db: Session = Depends(get_db)):
+def adjudicar(
+    lid: int, payload: AdjudicarIn, db: Session = Depends(get_db),
+    sesion_usuario: Optional[Usuario] = Depends(usuario_actual),
+):
     lic = obtener_o_404(db, Licitacion, lid, "Licitación")
-    usuario = obtener_o_404(db, Usuario, payload.usuario_id, "Usuario")
+    usuario, _rol = resolver_actor_transicion(db, payload.usuario_id, None, sesion_usuario)
     contraparte = (
         obtener_o_404(db, Contraparte, payload.contraparte_id, "Contraparte")
         if payload.contraparte_id
