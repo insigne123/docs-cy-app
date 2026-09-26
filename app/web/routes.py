@@ -41,6 +41,7 @@ from app.models.licitacion import Licitacion
 from app.services.alertas import calcular_alertas, resumen_alertas
 from app.services.auditoria import historial_global
 from app.services.busqueda import buscar_global
+from app.services.comentarios import agregar_comentario, listar_comentarios
 from app.services.auth import (
     crear_token,
     esta_bloqueado,
@@ -563,6 +564,7 @@ def detalle(
             "hito_tipos": list(HitoTipo),
             "hito_estados": list(HitoEstado),
             "multa_estados": list(MultaEstado),
+            "comentarios": listar_comentarios(db, "contrato", cid),
             **_catalogos_basicos(db),
         },
         headers=SIN_CACHE,
@@ -749,6 +751,23 @@ def actualizar_estado_multa_submit(
     return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Multa actualizada')}", status_code=303)
 
 
+@router.post("/panel/contratos/{cid}/comentarios", include_in_schema=False)
+def agregar_comentario_contrato_submit(
+    cid: int, request: Request, db: Session = Depends(get_db), texto: str = Form(...),
+):
+    """Nota libre: cualquier usuario autenticado puede dejarla, no está
+    reservada a un rol — es contexto compartido, no una acción de flujo."""
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    obtener_o_404(db, Contrato, cid, "Contrato")
+    if not texto.strip():
+        return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('El comentario no puede estar vacío')}", status_code=303)
+    agregar_comentario(db, "contrato", cid, usuario.id, texto)
+    db.commit()
+    return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Comentario agregado')}", status_code=303)
+
+
 @router.post("/panel/contratos/{cid}/transicion", include_in_schema=False)
 async def transicion_submit(cid: int, request: Request, db: Session = Depends(get_db)):
     usuario, r = _usuario_o_redirect(request, db)
@@ -889,6 +908,7 @@ def detalle_licitacion(
             "garantia_tipos": list(GarantiaTipo),
             "garantia_instrumentos": list(GarantiaInstrumento),
             "monedas": list(Moneda),
+            "comentarios": listar_comentarios(db, "licitacion", lid),
         },
         headers=SIN_CACHE,
     )
@@ -924,6 +944,21 @@ async def transicion_licitacion_submit(lid: int, request: Request, db: Session =
     except ValueError as exc:
         return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Estado inválido: ' + str(exc))}", status_code=303)
     return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Estado actualizado')}", status_code=303)
+
+
+@router.post("/panel/licitaciones/{lid}/comentarios", include_in_schema=False)
+def agregar_comentario_licitacion_submit(
+    lid: int, request: Request, db: Session = Depends(get_db), texto: str = Form(...),
+):
+    usuario, r = _usuario_o_redirect(request, db)
+    if r is not None:
+        return r
+    obtener_o_404(db, Licitacion, lid, "Licitación")
+    if not texto.strip():
+        return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('El comentario no puede estar vacío')}", status_code=303)
+    agregar_comentario(db, "licitacion", lid, usuario.id, texto)
+    db.commit()
+    return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Comentario agregado')}", status_code=303)
 
 
 @router.post("/panel/licitaciones/{lid}/adjudicar", include_in_schema=False)

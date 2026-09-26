@@ -169,3 +169,17 @@ class Documento(Base, TimestampMixin):
     hash_sha256: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
     cargado_por_id: Mapped[int] = mapped_column(ForeignKey("usuario.id"))
     cargado_en: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class Comentario(Base, TimestampMixin):
+    """Nota libre en la ficha de un contrato o licitación — bitácora aparte
+    de los cambios de estado (EventoEstado), para dejar contexto que no
+    encaja en un comentario de transición."""
+    __tablename__ = "comentario"
+    __table_args__ = (Index("ix_comentario_entidad", "entidad_tipo", "entidad_id"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    entidad_tipo: Mapped[str] = mapped_column(String(20))  # "contrato" | "licitacion"
+    entidad_id: Mapped[int] = mapped_column(Integer)
+    usuario_id: Mapped[int] = mapped_column(ForeignKey("usuario.id"))
+    texto: Mapped[str] = mapped_column(Text)

@@ -108,4 +108,19 @@
   <div style="grid-column:1/-1"><button class="btn" type="submit">Agregar garantía</button></div>
 </form>
 </details>
+
+<h2>Comentarios</h2>
+<form method="post" action="/panel/licitaciones/{{ l.id }}/comentarios" style="margin-bottom:12px">
+  <textarea name="texto" rows="2" placeholder="Deja una nota para quien siga con esta licitación…" required style="width:100%;padding:8px;border:1px solid var(--line);border-radius:8px;font-family:inherit;font-size:13.5px"></textarea>
+  <div style="margin-top:6px"><button class="btn" type="submit">Comentar</button></div>
+</form>
+{% if comentarios %}
+<div class="tabla-scroll"><table>
+  <thead><tr><th>Fecha</th><th>Usuario</th><th>Comentario</th></tr></thead>
+  <tbody>
+  {% for cm in comentarios %}
+  <tr><td>{{ cm.creado_en.strftime('%Y-%m-%d %H:%M') }}</td><td>{{ cm.usuario }}</td><td class="obj">{{ cm.texto }}</td></tr>
+  {% endfor %}
+  </tbody></table></div>
+{% else %}<p class="muted">Sin comentarios todavía.</p>{% endif %}
 {% endblock %}
