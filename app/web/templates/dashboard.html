@@ -50,6 +50,17 @@
   {% endfor %}
 </div>
 
+<div class="sub" style="margin-bottom:6px">Contratos ingresados por mes (últimos 12 meses)</div>
+<div class="tendencia">
+  {% for t in tendencia %}
+  <div class="barra">
+    <div class="valor">{{ t.cantidad }}</div>
+    <div class="rect" style="height:{{ t.pct }}%" title="{{ t.etiqueta }}: {{ t.cantidad }}"></div>
+    <div class="mes">{{ t.etiqueta }}</div>
+  </div>
+  {% endfor %}
+</div>
+
 <form class="filtros" method="get" action="/panel">
   <label>Agrupar por
     <select name="agrupacion">

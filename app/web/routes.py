@@ -59,6 +59,7 @@ from app.services.dashboard import (
     listar_vigentes_para_gestion,
     opciones_filtros,
     semaforo_de,
+    tendencia_mensual,
 )
 from app.services.formatos import sha256_bytes
 from app.services.licitaciones import (
@@ -260,6 +261,7 @@ def panel(
             "licitaciones_activas": activas[:8],
             "licitaciones_activas_total": len(activas),
             "licitaciones_conteo": contar_resumen_licitaciones(db),
+            "tendencia": tendencia_mensual(db),
             "error": error,
         },
         headers=SIN_CACHE,

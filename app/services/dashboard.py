@@ -264,6 +264,40 @@ def listar_vigentes_para_gestion(session: Session, hoy: Optional[date] = None) -
     return filas
 
 
+def tendencia_mensual(session: Session, meses: int = 12, hoy: Optional[date] = None) -> list[dict]:
+    """Contratos ingresados por mes, para el gráfico de tendencia del
+    tablero — siempre los últimos `meses` meses hasta el actual, incluso los
+    que tienen 0 (para que la forma del gráfico no salte)."""
+    hoy = hoy or date.today()
+    periodos: list[tuple[int, int]] = []
+    y, m = hoy.year, hoy.month
+    for _ in range(meses):
+        periodos.append((y, m))
+        m -= 1
+        if m == 0:
+            m, y = 12, y - 1
+    periodos.reverse()
+
+    conteo = {f"{y:04d}-{m:02d}": 0 for y, m in periodos}
+    for fecha in session.scalars(select(Contrato.fecha_ingreso)):
+        if fecha is None:
+            continue
+        clave = f"{fecha.year:04d}-{fecha.month:02d}"
+        if clave in conteo:
+            conteo[clave] += 1
+
+    maximo = max(conteo.values()) or 1
+    return [
+        {
+            "periodo": f"{y:04d}-{m:02d}",
+            "etiqueta": MESES_ES[m][:3].capitalize(),
+            "cantidad": conteo[f"{y:04d}-{m:02d}"],
+            "pct": round(conteo[f"{y:04d}-{m:02d}"] / maximo * 100),
+        }
+        for y, m in periodos
+    ]
+
+
 def opciones_filtros(session: Session) -> dict:
     return {
         "lineas": [{"value": e.value, "nombre": NOMBRES_LINEA[e.value]} for e in LineaContrato],
