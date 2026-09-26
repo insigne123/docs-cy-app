@@ -33,6 +33,11 @@
       display:flex;align-items:center;padding:0 24px}
     .masthead .overlay strong{color:#fff;font-size:18px;font-weight:700;letter-spacing:.01em}
     .masthead .overlay span{color:#cfd9e6;font-size:11.5px;display:block;margin-top:2px;letter-spacing:.02em}
+    .manual-btn{margin-left:auto;flex:0 0 auto;display:flex;align-items:center;justify-content:center;
+      width:38px;height:38px;border-radius:10px;background:rgba(255,255,255,.14);color:#fff;
+      text-decoration:none;transition:background .12s ease}
+    .manual-btn:hover{background:rgba(255,255,255,.26)}
+    .manual-btn svg{width:19px;height:19px}
     .page{display:flex;flex-direction:column;min-height:100vh}
     .shell{display:flex;align-items:stretch;flex:1 1 auto}
     .sidebar{flex:0 0 218px;width:218px;background:var(--card);border-right:1px solid var(--line);
@@ -146,6 +151,9 @@
     <img src="{{ masthead_image or '/static/img/masthead-biblioteca.jpg' }}" alt="">
     <div class="overlay">
       <div><strong>{{ masthead_title or 'Sistema de Contratos y Licitaciones' }}</strong><span>{{ masthead_subtitle or 'Gestión documental y jurídica' }}</span></div>
+      <a class="manual-btn" href="/manual" title="Manual de uso" aria-label="Manual de uso">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4.5A2.5 2.5 0 0 1 4.5 2H12v18H4.5A2.5 2.5 0 0 0 2 22.5z"/><path d="M22 4.5A2.5 2.5 0 0 0 19.5 2H12v18h7.5a2.5 2.5 0 0 1 2.5 2.5z"/></svg>
+      </a>
     </div>
   </header>
   <div class="shell">

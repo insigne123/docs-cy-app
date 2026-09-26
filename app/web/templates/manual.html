@@ -1,0 +1,248 @@
+{% extends "base.html" %}
+{% block title %}Manual de uso · Panel de Contratos{% endblock %}
+{% block body %}
+<h1>Manual de uso</h1>
+<div class="sub">
+  Guía de referencia del Sistema de Contratos y Licitaciones de Grupo Expro:
+  qué hace cada módulo, quién puede usarlo y cómo se conecta con el resto del
+  proceso. Puedes volver a abrir esta página en cualquier momento con el
+  ícono de libro, arriba a la derecha.
+</div>
+
+<div class="tabla-scroll" style="margin-bottom:20px">
+  <table>
+    <thead><tr><th>Índice</th></tr></thead>
+    <tbody>
+      <tr><td><a href="#idea">1. Idea general del sistema</a></td></tr>
+      <tr><td><a href="#roles">2. Roles y qué puede hacer cada uno</a></td></tr>
+      <tr><td><a href="#login">3. Iniciar sesión</a></td></tr>
+      <tr><td><a href="#tareas">4. Mis tareas</a></td></tr>
+      <tr><td><a href="#tablero">5. Tablero</a></td></tr>
+      <tr><td><a href="#listado">6. Listado de contratos</a></td></tr>
+      <tr><td><a href="#nueva-solicitud">7. Nueva solicitud (Flujo Regular / Autogestionado)</a></td></tr>
+      <tr><td><a href="#nueva-licitacion">8. Nueva licitación (Flujo de Licitaciones)</a></td></tr>
+      <tr><td><a href="#ficha">9. La ficha de un contrato o licitación</a></td></tr>
+      <tr><td><a href="#vigencias">10. Gestión de vigencias</a></td></tr>
+      <tr><td><a href="#administracion">11. Administración</a></td></tr>
+      <tr><td><a href="#metricas">12. Métricas de proceso</a></td></tr>
+      <tr><td><a href="#alertas">13. Alertas</a></td></tr>
+      <tr><td><a href="#reportes">14. Reportes y exportar a Excel</a></td></tr>
+      <tr><td><a href="#seguridad">15. Cuentas y seguridad</a></td></tr>
+      <tr><td><a href="#faq">16. Preguntas frecuentes</a></td></tr>
+    </tbody>
+  </table>
+</div>
+
+<section id="idea">
+<h2>1. Idea general del sistema</h2>
+<p>
+  El sistema ordena todo el ciclo de vida de un contrato o una licitación en
+  <strong>tres rutas (líneas) según su riesgo y complejidad</strong>, todas con
+  un mismo destino final: quedar registradas con su vigencia, garantías,
+  hitos y responsable, para que nada se pierda ni se firme sin los controles
+  que corresponden.
+</p>
+<ul>
+  <li><span class="badge l-A_regular">Flujo Regular</span> — contratos con redacción a medida, pasando por Legal.</li>
+  <li><span class="badge l-B_autogestionado">Flujo Autogestionado</span> — contratos repetitivos y de bajo riesgo, con un formato ya aprobado por Legal/Fiscalía, sin redacción caso a caso.</li>
+  <li><span class="badge l-C_licitacion">Licitaciones</span> — procesos de licitación externa: primero se evalúa y se presenta una oferta: si se adjudica, se transforma automáticamente en un contrato.</li>
+</ul>
+<p>
+  Cada contrato o licitación avanza por <strong>estados</strong> (por ejemplo
+  "ingreso" → "admisibilidad" → "visación" → "firma" → "vigente"), y en cada
+  estado solo un rol específico puede hacerlo avanzar — el sistema lo exige
+  automáticamente, no depende de que cada persona recuerde la regla.
+</p>
+</section>
+
+<section id="roles">
+<h2>2. Roles y qué puede hacer cada uno</h2>
+<div class="tabla-scroll">
+<table>
+  <thead><tr><th>Rol</th><th>Qué hace en el sistema</th></tr></thead>
+  <tbody>
+    <tr><td>Unidad Solicitante</td><td>Ingresa solicitudes de contrato y licitación, resuelve aclaraciones, coordina la firma.</td></tr>
+    <tr><td>Jefatura</td><td>Aprueba la solicitud (coherencia y necesidad) antes de que pase a Legal.</td></tr>
+    <tr><td>Legal</td><td>Revisa admisibilidad jurídica, redacta o adecúa el contrato, visa, y mantiene los formatos estándar.</td></tr>
+    <tr><td>Admin. Licitaciones</td><td>Controla administrativamente las licitaciones: bases, antecedentes, examen de admisibilidad y adjudicación.</td></tr>
+    <tr><td>Financiera</td><td>Evalúa la oferta económica y es la única que constituye garantías (boletas, pólizas, fiel cumplimiento, seriedad).</td></tr>
+    <tr><td>Técnica</td><td>Prepara la propuesta técnica de una licitación y revisa las bases.</td></tr>
+    <tr><td>Gerencia</td><td>Aprueba según monto (Flujo Regular/Autogestionado) y evalúa factibilidad preliminar en licitaciones.</td></tr>
+    <tr><td>Admin. Contratos</td><td>Integra el contrato ya firmado (vigencia, hitos, renovaciones) y gestiona su vigencia mientras dura.</td></tr>
+    <tr><td>Admin. Sistema</td><td>Administra los catálogos del sistema (unidades, contrapartes, formatos, usuarios) y tiene acceso técnico completo.</td></tr>
+  </tbody>
+</table>
+</div>
+<p class="muted">
+  El menú de la izquierda solo muestra los módulos que tu rol puede usar —
+  si algo que esperabas ver no aparece, es porque esa responsabilidad es de
+  otro rol, no un error.
+</p>
+</section>
+
+<section id="login">
+<h2>3. Iniciar sesión</h2>
+<p>
+  Ingresa con tu email y contraseña en la pantalla de inicio. Si te
+  equivocas de contraseña varias veces seguidas, la cuenta se bloquea
+  temporalmente por unos minutos como medida de seguridad — espera el
+  tiempo indicado y vuelve a intentar. Si tu cuenta aparece "inactiva",
+  contacta a un administrador del sistema.
+</p>
+</section>
+
+<section id="tareas">
+<h2>4. Mis tareas</h2>
+<p>
+  Es tu bandeja personal: muestra <strong>solo</strong> los contratos y
+  licitaciones que están esperando una acción tuya en este momento, según tu
+  rol y el estado en que se encuentran. Es la forma más rápida de saber "qué
+  me toca hacer hoy" sin tener que revisar el listado completo. Está
+  disponible para todos los roles, incluso los que no ven el Tablero.
+</p>
+</section>
+
+<section id="tablero">
+<h2>5. Tablero</h2>
+<p>
+  Vista general de todos los contratos, agrupados por mes (según fecha de
+  ingreso, firma o vencimiento, a elección). Muestra:
+</p>
+<ul>
+  <li><strong>Indicadores (KPI)</strong>: total de contratos, cuántos son de cada línea, con el detalle de cuántos ya finalizaron su trámite y cuántos siguen en curso; cuántos están vigentes, por vencer, vencidos o en renovación; y el monto total por moneda.</li>
+  <li><strong>Semáforo de vigencia</strong>: cada contrato vigente se marca según cuánto le queda para vencer (los umbrales de días son configurables en Administración).</li>
+  <li><strong>Licitaciones en curso</strong>: las que todavía están en la Fase I (antes de adjudicarse), separadas de los contratos.</li>
+  <li><strong>Filtros</strong>: por línea, estado, unidad, administrador, contraparte y rango de fechas.</li>
+</ul>
+</section>
+
+<section id="listado">
+<h2>6. Listado de contratos</h2>
+<p>
+  Todos los contratos en una sola tabla plana (sin agrupar por mes), con
+  filtros propios y un botón para <strong>exportar a Excel</strong> exactamente
+  lo que queda filtrado en pantalla.
+</p>
+</section>
+
+<section id="nueva-solicitud">
+<h2>7. Nueva solicitud (Flujo Regular / Autogestionado)</h2>
+<p>
+  Acá se ingresa un contrato nuevo. El propio formulario pide los
+  antecedentes básicos y arma un caso de <strong>Flujo Regular</strong>. Si tu
+  necesidad calza con un formato estándar ya aprobado (por ejemplo, un NDA
+  típico), tu Área Legal puede haberlo configurado como
+  <strong>Flujo Autogestionado</strong>: se selecciona el formato desde
+  Administración y el proceso salta la redacción caso a caso — pero no se
+  puede modificar el clausulado del formato, el sistema lo detecta si el
+  archivo cambia.
+</p>
+<p>
+  Después de creada, la solicitud avanza sola de estado en estado a medida
+  que cada rol responsable la aprueba, desde la ficha del propio contrato
+  (ver sección 9).
+</p>
+</section>
+
+<section id="nueva-licitacion">
+<h2>8. Nueva licitación (Flujo de Licitaciones)</h2>
+<p>
+  Inicia el proceso de una licitación externa (Fase I: ingreso de
+  antecedentes, examen de admisibilidad, revisión de bases, preparación y
+  presentación de la oferta, resultado). Si el resultado es
+  <strong>adjudicada</strong>, el sistema crea automáticamente el contrato
+  correspondiente y lo pasa a Fase II (formalización: ajuste del contrato,
+  constitución de garantías y firma) — no hace falta volver a cargar los
+  datos a mano. Si no se adjudica, queda archivada igual, para trazabilidad
+  y mejora continua.
+</p>
+</section>
+
+<section id="ficha">
+<h2>9. La ficha de un contrato o licitación</h2>
+<p>
+  Al abrir un contrato o licitación desde cualquier listado, ves su línea de
+  tiempo completa (quién hizo qué cambio de estado y cuándo), sus datos, y
+  un formulario para avanzarlo al siguiente estado disponible — el sistema
+  solo te deja elegir los estados a los que tu rol puede pasar ese contrato
+  ahora mismo, y te pide la información que falte (por ejemplo, cargar un
+  borrador, marcar la visación de la contraparte, o registrar una garantía)
+  antes de dejarte avanzar.
+</p>
+<p>
+  Desde ahí también se registran garantías, hitos y multas, y se puede
+  <strong>descartar</strong> el proceso en cualquier momento (con un motivo
+  obligatorio) si deja de ser viable.
+</p>
+</section>
+
+<section id="vigencias">
+<h2>10. Gestión de vigencias</h2>
+<p>
+  Solo contratos ya <strong>vigentes</strong>, ordenados por urgencia (los
+  vencidos y por vencer primero). Desde aquí Admin. Contratos renueva la
+  fecha de fin de vigencia o da por terminado un contrato.
+</p>
+</section>
+
+<section id="administracion">
+<h2>11. Administración <span class="muted">(solo Admin. Sistema)</span></h2>
+<p>
+  Catálogos base que usa todo el sistema — si un desplegable de "Nueva
+  solicitud" aparece vacío, se resuelve creando el dato que falta aquí:
+</p>
+<ul>
+  <li><strong>Unidades solicitantes</strong>, <strong>Contrapartes</strong> y <strong>Usuarios</strong>: alta, edición y baja (desactivar, no se borran para no perder historial).</li>
+  <li><strong>Formatos estándar</strong>: el archivo base para el Flujo Autogestionado. Cada formato tiene un botón de
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="width:13px;height:13px;vertical-align:-2px"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8Z"/><circle cx="12" cy="12" r="3"/></svg>
+    para previsualizar el archivo exacto que se subió, antes de aprobarlo o de usarlo en una solicitud.</li>
+</ul>
+</section>
+
+<section id="metricas">
+<h2>12. Métricas de proceso</h2>
+<p>
+  Indicadores de gestión: tiempo promedio y máximo que los contratos pasan
+  en cada estado (para detectar cuellos de botella), tasa de descarte, y
+  cuántos contratos llegaron a "vigente" cada mes.
+</p>
+</section>
+
+<section id="alertas">
+<h2>13. Alertas</h2>
+<p>
+  Todo lo que necesita atención ahora: contratos vencidos o por vencer,
+  renovaciones próximas, garantías por vencer, hitos atrasados y solicitudes
+  estancadas en "aclaraciones" por demasiado tiempo. Se calculan al
+  momento, no hace falta configurarlas.
+</p>
+</section>
+
+<section id="reportes">
+<h2>14. Reportes y exportar a Excel</h2>
+<p>
+  Desde el Tablero, el botón "Descargar reporte del mes" genera un reporte
+  cerrado de un período (XLSX o PDF) con el resumen, el detalle de
+  contratos, alertas y garantías de ese mes. Para un extracto de trabajo
+  del día a día con tus propios filtros, usa "Exportar a XLSX" en el
+  Listado de contratos.
+</p>
+</section>
+
+<section id="seguridad">
+<h2>15. Cuentas y seguridad</h2>
+<ul>
+  <li>Cada acción queda registrada con quién la hizo y cuándo — la trazabilidad es total, incluidos los procesos descartados.</li>
+  <li>Las contraseñas nunca se guardan en texto plano, y una cuenta se bloquea temporalmente tras varios intentos fallidos de inicio de sesión seguidos.</li>
+  <li>Solo Admin. Sistema puede crear o modificar usuarios, unidades, contrapartes y formatos — desde el panel y también desde la API.</li>
+</ul>
+</section>
+
+<section id="faq">
+<h2>16. Preguntas frecuentes</h2>
+<p><strong>No veo el Tablero ni el Listado de contratos.</strong> Unidad Solicitante y Jefatura no los necesitan para su trabajo diario; usa "Mis tareas" en su lugar.</p>
+<p><strong>No puedo avanzar un contrato al siguiente estado.</strong> Revisa el mensaje de error: indica si falta un requisito (por ejemplo, cargar un documento) o si esa acción le corresponde a otro rol.</p>
+<p><strong>Necesito un formato nuevo para Flujo Autogestionado.</strong> Pídeselo a un administrador del sistema — se crea en Administración → Formatos estándar.</p>
+<p><strong>Mi cuenta quedó bloqueada.</strong> Espera los minutos que indica el mensaje de la pantalla de inicio de sesión; se libera sola.</p>
+</section>
+{% endblock %}

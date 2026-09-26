@@ -1318,6 +1318,16 @@ def descargar_reporte(
     )
 
 
+@router.get("/manual", response_class=HTMLResponse, include_in_schema=False)
+def manual(request: Request, db: Session = Depends(get_db)):
+    """Manual de uso: a propósito NO exige login (a diferencia de casi todo lo
+    demás), para que alguien con problemas para entrar también pueda
+    consultarlo. Igual resuelve el usuario de la sesión si la hay, para que
+    el menú lateral se vea con normalidad."""
+    request.state.usuario = usuario_actual(request, db)
+    return templates.TemplateResponse(request=request, name="manual.html", context={})
+
+
 @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
 def login_form(
     request: Request, error: Optional[str] = None, siguiente: Optional[str] = None,
