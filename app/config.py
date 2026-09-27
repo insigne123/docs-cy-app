@@ -16,6 +16,13 @@ class Settings(BaseSettings):
     auth_required: bool = False
     secret_key: str = "dev-inseguro-cambiar-en-produccion"
 
+    # Notificaciones por correo (Resend). Vacío por defecto = desactivadas: no
+    # se hace ninguna llamada de red (ni siquiera en pruebas o en desarrollo
+    # sin la clave configurada).
+    resend_api_key: str = ""
+    resend_from: str = "Sistema de Contratos <onboarding@resend.dev>"
+    app_base_url: str = "https://docs-cy.web.app"
+
     @field_validator("database_url")
     @classmethod
     def _normalizar_database_url(cls, v: str) -> str:

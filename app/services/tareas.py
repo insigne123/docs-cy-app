@@ -24,15 +24,32 @@ _TERM_CONTRATO = frozenset(e.value for e in ESTADOS_CONTRATO_TERMINALES)
 _TERM_LICITACION = frozenset(e.value for e in ESTADOS_LICITACION_TERMINALES)
 
 
+def roles_que_pueden_actuar_contrato(estado: str, linea_val: str) -> frozenset[str]:
+    """Unión de los roles habilitados por cualquier transición disponible
+    desde `estado` para esa línea — reutilizado por Mis tareas y por las
+    notificaciones por correo (services/notificaciones.py), para no
+    duplicar el mapeo estado/línea -> rol responsable."""
+    roles: set[str] = set()
+    for t in TRANSICIONES_CONTRATO:
+        if t.desde == estado and (not t.lineas or linea_val in t.lineas):
+            roles |= set(t.roles)
+    return frozenset(roles)
+
+
+def roles_que_pueden_actuar_licitacion(estado: str) -> frozenset[str]:
+    roles: set[str] = set()
+    for t in TRANSICIONES_LICITACION:
+        if t.desde == estado:
+            roles |= set(t.roles)
+    return frozenset(roles)
+
+
 def _puede_actuar_contrato(rol_val: str, estado: str, linea_val: str) -> bool:
-    return any(
-        t.desde == estado and rol_val in t.roles and (not t.lineas or linea_val in t.lineas)
-        for t in TRANSICIONES_CONTRATO
-    )
+    return rol_val in roles_que_pueden_actuar_contrato(estado, linea_val)
 
 
 def _puede_actuar_licitacion(rol_val: str, estado: str) -> bool:
-    return any(t.desde == estado and rol_val in t.roles for t in TRANSICIONES_LICITACION)
+    return rol_val in roles_que_pueden_actuar_licitacion(estado)
 
 
 def tareas_pendientes(session: Session, usuario: Usuario) -> dict:

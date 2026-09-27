@@ -44,6 +44,7 @@ from app.services.auditoria import historial_global
 from app.services.busqueda import buscar_global
 from app.services.comentarios import agregar_comentario, listar_comentarios
 from app.services.documentos import subir_documento
+from app.services.notificaciones import notificar_transicion_contrato, notificar_transicion_licitacion
 from app.services.auth import (
     crear_token,
     esta_bloqueado,
@@ -859,6 +860,7 @@ async def transicion_submit(cid: int, request: Request, db: Session = Depends(ge
         return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg(exc)}", status_code=303)
     except ValueError as exc:
         return RedirectResponse(url=f"/panel/contratos/{cid}?error={_msg('Estado inválido: ' + str(exc))}", status_code=303)
+    notificar_transicion_contrato(db, contrato)
     return RedirectResponse(url=f"/panel/contratos/{cid}?ok={_msg('Estado actualizado')}", status_code=303)
 
 
@@ -993,6 +995,7 @@ async def transicion_licitacion_submit(lid: int, request: Request, db: Session =
         return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg(exc)}", status_code=303)
     except ValueError as exc:
         return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg('Estado inválido: ' + str(exc))}", status_code=303)
+    notificar_transicion_licitacion(db, lic)
     return RedirectResponse(url=f"/panel/licitaciones/{lid}?ok={_msg('Estado actualizado')}", status_code=303)
 
 
@@ -1069,6 +1072,7 @@ def adjudicar_submit(
         db.commit()
     except ErrorTransicion as exc:
         return RedirectResponse(url=f"/panel/licitaciones/{lid}?error={_msg(exc)}", status_code=303)
+    notificar_transicion_contrato(db, contrato)
     return RedirectResponse(
         url=f"/panel/contratos/{contrato.id}?ok={_msg('Licitación adjudicada: contrato creado')}", status_code=303
     )
